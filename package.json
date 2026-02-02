@@ -1,0 +1,15 @@
+{
+    "name": "pedicab-app",
+    "version": "1.0.0",
+    "description": "Pedicab Driver Decision Fatigue Support System",
+    "main": "index.html",
+    "scripts": {
+        "start": "browser-sync start --server --files \"css/*.css, pages/*.html, *.html\" --index \"signin.html\""
+    },
+    "devDependencies": {
+        "browser-sync": "^3.0.0"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.93.3"
+    }
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMO Admin Login | Dumaguete Pedicab</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+
+<body style="background: #2D3192;"> <!-- Professional blue background -->
+    <div class="auth-container">
+        <div class="auth-card" style="border-top: 5px solid var(--primary);">
+            <div class="auth-header">
+                <div class="logo-icon" style="background: #2D3192;">
+                    <i class='bx bxs-shield-quarter'></i>
+                </div>
+                <h1>TMO Administration</h1>
+                <p>Traffic Management Office Portal</p>
+            </div>
+
+            <form id="tmoForm">
+                <div class="form-group">
+                    <label for="adminId">Admin Credentials / Email</label>
+                    <input type="text" id="adminId" class="form-input" placeholder="tmo-admin-id" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Security Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn" style="background: #2D3192; color: white;">
+                    Access Dashboard <i class='bx bx-log-in-circle'></i>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="signin.html"><i class='bx bx-arrow-back'></i> Back to User Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+
+    <script>
+        document.getElementById('tmoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('adminId').value;
+            const password = document.getElementById('password').value;
+
+            // 1. Authenticate with Supabase
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                alert('Admin Login Failed: ' + error.message);
+                return;
+            }
+
+            // 2. Check if the user is an admin
+            const userRole = data.user.user_metadata.role;
+
+            if (userRole !== 'tmo' && userRole !== 'admin') {
+                alert('Access Denied: You do not have administrator privileges.');
+                await supabaseClient.auth.signOut();
+                return;
+            }
+
+            // 3. Success -> Go to dashboard
+            window.location.href = 'dashboard.html';
+        });
+    </script>
+</body>
+
+</html>

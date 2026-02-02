@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | Pedicab Support System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-icon">
+                    <i class='bx bxs-car'></i>
+                </div>
+                <h1>Welcome Back</h1>
+                <p>Sign in to your Pedicab Support account</p>
+            </div>
+
+            <div class="role-selector">
+                <div class="role-option active" onclick="selectRole(this, 'passenger')">
+                    <i class='bx bx-user'></i>
+                    Passenger
+                </div>
+                <div class="role-option" onclick="selectRole(this, 'driver')">
+                    <i class='bx bx-id-card'></i>
+                    Driver
+                </div>
+            </div>
+
+            <form id="signinForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-input" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" class="form-input" placeholder="••••••••" required
+                            style="padding-right: 45px;">
+                        <i class='bx bx-hide' id="togglePassword"
+                            style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 20px;"></i>
+                    </div>
+                </div>
+
+                <div style="text-align: right; margin-bottom: 24px;">
+                    <a href="#"
+                        style="color: var(--primary); font-size: 14px; text-decoration: none; font-weight: 500;">Forgot
+                        password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Sign In <i class='bx bx-right-arrow-alt'></i>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Don't have an account? <a href="signup.html">Create Account</a>
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #e2e8f0;">
+                    <a href="tmo-signin.html"
+                        style="color: var(--text-muted); font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                        <i class='bx bx-shield-quarter'></i> TMO Admin Access (PC Only)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+
+    <script>
+        // Toggle Password Visibility
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+
+        togglePassword.addEventListener('click', function (e) {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('bx-show');
+            this.classList.toggle('bx-hide');
+        });
+
+        function selectRole(element, role) {
+            document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        document.getElementById('signinForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const activeRole = document.querySelector('.role-option.active').innerText.trim().toLowerCase();
+
+            // 1. Check if the email exists first to provide a specific error
+            const { data: userExists, error: checkError } = await supabaseClient
+                .from('users')
+                .select('email')
+                .eq('email', email)
+                .single();
+
+            if (!userExists) {
+                alert('Wrong Email! We could not find an account with this email address.');
+                return;
+            }
+
+            // 2. Authenticate with Supabase
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                // If we know the email exists but signin fails, it's the password
+                alert('Wrong Password! Please check your password and try again.');
+                return;
+            }
+
+            // 3. Check if the user role matches the selected role
+            const userRole = data.user.user_metadata.role;
+
+            if (userRole !== activeRole) {
+                alert(`Err: You are registered as a ${userRole}, but trying to login as a ${activeRole}.`);
+                await supabaseClient.auth.signOut();
+                return;
+            }
+
+            // 4. Redirect based on role
+            if (activeRole === 'driver') {
+                window.location.href = 'driver-app.html';
+            } else {
+                window.location.href = 'commuter-app.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

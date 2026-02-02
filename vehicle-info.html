@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Info | Driver App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        .info-container {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 24px;
+        }
+
+        .vehicle-card {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        .vehicle-icon {
+            width: 80px;
+            height: 80px;
+            background: #e0e7ff;
+            color: var(--primary);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 20px;
+        }
+
+        .plate-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 6px 16px;
+            background: #ecfdf5;
+            color: #10b981;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .info-list {
+            background: white;
+            border-radius: 24px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body style="background: #f8fafc;">
+    <div class="info-container">
+        <a href="javascript:history.back()" class="back-btn"><i class='bx bx-left-arrow-alt'></i> Back to App</a>
+
+        <div class="vehicle-card">
+            <div class="vehicle-icon"><i class='bx bxs-car'></i></div>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 4px;">Registered Plate Number</p>
+            <h1 id="plate-display" class="plate-number">FETCHING...</h1>
+            <div id="status-pill" class="status-pill">Checking Status...</div>
+        </div>
+
+        <div class="info-list">
+            <div class="info-item">
+                <span class="info-label">Vehicle Type</span>
+                <span id="vehicle-type" class="info-value">Traditional Pedicab</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">TMO Permit No.</span>
+                <span id="permit-no" class="info-value">Fetching...</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Registration Group</span>
+                <span id="reg-group" class="info-value">Fetching...</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Last Inspection</span>
+                <span id="last-inspection" class="info-value">Fetching...</span>
+            </div>
+        </div>
+
+        <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 30px; line-height: 1.5;">
+            Vehicle information is verified by the <br><strong>Dumaguete Traffic Management Office</strong>.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script>
+        async function loadVehicleInfo() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                const { data: driverData } = await supabaseClient
+                    .from('drivers')
+                    .select('*')
+                    .eq('driver_id', session.user.id)
+                    .single();
+
+                if (driverData) {
+                    document.getElementById('plate-display').innerText = driverData.pedicab_plate;
+                    document.getElementById('vehicle-type').innerText = driverData.vehicle_type || 'Traditional Pedicab';
+                    document.getElementById('permit-no').innerText = driverData.tmo_permit_no || 'Not Set';
+                    document.getElementById('reg-group').innerText = driverData.registration_group || 'Not Set';
+                    document.getElementById('last-inspection').innerText = driverData.last_inspection || 'Not Set';
+
+                    // Dynamic Status Pill
+                    const pill = document.getElementById('status-pill');
+                    if (driverData.verification_status === 'verified') {
+                        pill.innerText = 'Verified & Active';
+                        pill.style.background = '#ecfdf5';
+                        pill.style.color = '#10b981';
+                    } else {
+                        pill.innerText = 'Pending Verification';
+                        pill.style.background = '#fffbeb';
+                        pill.style.color = '#f59e0b';
+                    }
+                }
+            }
+        }
+        loadVehicleInfo();
+    </script>
+</body>
+
+</html>
