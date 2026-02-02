@@ -28,7 +28,7 @@ export async function getCurrentPosition() {
             {
                 enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 30000
+                maximumAge: 0 // Do not use cached readings
             }
         );
     });
