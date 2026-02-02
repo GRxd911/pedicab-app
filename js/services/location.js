@@ -45,10 +45,9 @@ export function watchPosition(callback) {
 
     const watchId = navigator.geolocation.watchPosition(
         (position) => {
-            // FILTER: Only accept high accuracy readings (e.g., better than 100 meters)
-            // This prevents "jumping" when switching between Wi-Fi and GPS
-            if (position.coords.accuracy > 100) {
-                console.log(`Skipping low accuracy reading: ${position.coords.accuracy}m`);
+            // RELAXED FILTER: 500 meters is better for initial testing
+            if (position.coords.accuracy > 500) {
+                console.log(`Skipping very low accuracy reading: ${position.coords.accuracy}m`);
                 return;
             }
 
