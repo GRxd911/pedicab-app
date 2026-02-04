@@ -221,10 +221,31 @@ async function loadEarnings() {
         const tripsEl = document.getElementById('total-trips');
         const earningsEl = document.getElementById('total-earnings');
         const todayEarnEl = document.getElementById('modal-today-earn');
+        const modalTotalTrips = document.getElementById('modal-total-trips');
 
         if (tripsEl) tripsEl.innerText = stats.count;
         if (earningsEl) earningsEl.innerText = `₱${stats.total.toLocaleString()}`;
         if (todayEarnEl) todayEarnEl.innerText = `₱${stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        if (modalTotalTrips) modalTotalTrips.innerText = stats.count;
+
+        // Load History List
+        const history = await DriverService.getRecentHistory(currentUser.id);
+        const container = document.getElementById('earnings-trip-history');
+        if (container) {
+            if (history.length > 0) {
+                container.innerHTML = history.map(t => `
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 13px; font-weight: 700; color: #1e293b;">${t.dropoff_location}</div>
+                            <div style="font-size: 11px; color: #64748b;">${new Date(t.request_time).toLocaleDateString()}</div>
+                        </div>
+                        <div style="font-weight: 700; color: #10b981;">+₱${parseFloat(t.price).toFixed(2)}</div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">No recent trips recorded.</p>';
+            }
+        }
     } catch (e) {
         console.warn('Error loading earnings:', e);
     }
