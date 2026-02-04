@@ -355,8 +355,11 @@
             border-top: 1px solid #f1f5f9;
             position: fixed;
             bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
             width: 100%;
             max-width: 480px;
+            z-index: 9999;
         }
 
         .nav-tab {
@@ -678,7 +681,8 @@
             <a href="#" id="nav-map" onclick="switchTab('map')" class="nav-tab"><i class='bx bxs-map-alt'></i> Map</a>
             <a href="#" id="nav-history" onclick="switchTab('history')" class="nav-tab"><i class='bx bxs-time-five'></i>
                 History</a>
-            <a href="#" id="profileTab" class="nav-tab"><i class='bx bxs-user-circle'></i> Profile</a>
+            <a href="#" id="nav-profile" onclick="switchTab('profile')" class="nav-tab"><i
+                    class='bx bxs-user-circle'></i> Profile</a>
         </nav>
 
         <!-- Profile Overlay -->

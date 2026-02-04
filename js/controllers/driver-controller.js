@@ -435,18 +435,73 @@ window.closeChat = () => {
     document.getElementById('chatOverlay').style.display = 'none';
 };
 
+window.closeProfile = (e) => {
+    if (e.target.id === 'profileOverlay') document.getElementById('profileOverlay').style.display = 'none';
+};
+
+window.openEditProfile = () => {
+    document.getElementById('editProfileOverlay').style.display = 'flex';
+    // Populate fields
+    document.getElementById('edit-fullname').value = currentUser.user_metadata?.full_name || '';
+    document.getElementById('edit-phone').value = currentUser.user_metadata?.phone || '';
+    document.getElementById('edit-color').value = currentUser.user_metadata?.preferred_color || '#4f46e5';
+};
+
+window.closeEditProfile = (e) => {
+    if (e.target.id === 'editProfileOverlay' || e.target.classList.contains('bx-x')) {
+        document.getElementById('editProfileOverlay').style.display = 'none';
+    }
+};
+
+window.saveProfile = async () => {
+    const name = document.getElementById('edit-fullname').value;
+    const phone = document.getElementById('edit-phone').value;
+    const color = document.getElementById('edit-color').value;
+    const avatarFile = document.getElementById('avatar-upload').files[0];
+
+    if (!name) return alert('Name is required');
+
+    const btn = document.getElementById('save-profile-btn');
+    btn.innerText = 'Saving...';
+    btn.disabled = true;
+
+    try {
+        let avatarUrl = currentUser.user_metadata?.avatar_url;
+        if (avatarFile) {
+            avatarUrl = await DriverService.uploadAvatar(currentUser.id, avatarFile);
+        }
+
+        await DriverService.updateProfile(currentUser.id, name, phone, color);
+
+        // Update auth metadata manually for immediate sync
+        await supabaseClient.auth.updateUser({
+            data: { full_name: name, avatar_url: avatarUrl, preferred_color: color }
+        });
+
+        alert('Profile updated!');
+        location.reload();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    } finally {
+        btn.innerText = 'Save Changes';
+        btn.disabled = false;
+    }
+};
+
 window.switchTab = (tab) => {
     const homeView = document.getElementById('view-home');
     const mapView = document.getElementById('view-map');
     const navHome = document.getElementById('nav-home');
     const navMap = document.getElementById('nav-map');
     const navHistory = document.getElementById('nav-history');
+    const navProfile = document.getElementById('nav-profile');
 
     if (homeView) homeView.classList.remove('active');
     if (mapView) mapView.classList.remove('active');
     if (navHome) navHome.classList.remove('active');
     if (navMap) navMap.classList.remove('active');
     if (navHistory) navHistory.classList.remove('active');
+    if (navProfile) navProfile.classList.remove('active');
 
     if (tab === 'home' && homeView) {
         homeView.classList.add('active');
@@ -461,6 +516,10 @@ window.switchTab = (tab) => {
         if (navHistory) navHistory.classList.add('active');
         document.getElementById('earningsOverlay').style.display = 'flex';
         loadEarnings();
+    } else if (tab === 'profile') {
+        homeView.classList.add('active');
+        if (navProfile) navProfile.classList.add('active');
+        document.getElementById('profileOverlay').style.display = 'flex';
     }
 };
 
