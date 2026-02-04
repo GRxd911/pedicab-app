@@ -456,6 +456,11 @@ window.closeChat = () => {
     document.getElementById('chatOverlay').style.display = 'none';
 };
 
+window.openNotifications = () => {
+    document.getElementById('notifOverlay').style.display = 'flex';
+    document.getElementById('notif-dot').style.display = 'none'; // Clear the red dot when opened
+};
+
 window.closeProfile = (e) => {
     if (e.target.id === 'profileOverlay') document.getElementById('profileOverlay').style.display = 'none';
 };
