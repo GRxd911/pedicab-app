@@ -104,3 +104,11 @@ export async function uploadAvatar(userId, file) {
     return publicUrl;
 }
 
+export async function getSystemAlerts() {
+    const { data } = await supabaseClient
+        .from('system_alerts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+    return data || [];
+}

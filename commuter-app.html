@@ -33,12 +33,14 @@
         }
 
         .app-header {
-            padding: 24px;
+            padding: max(24px, env(safe-area-inset-top)) 24px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: white;
             border-bottom: 1px solid #eef2f6;
+            z-index: 1001;
+            /* Stay above content */
         }
 
         .app-header h1 {
@@ -187,14 +189,16 @@
         .navbar {
             display: flex;
             justify-content: space-around;
-            padding: 16px;
+            padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
             background: white;
             border-top: 1px solid #f1f5f9;
             position: fixed;
             bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
             width: 100%;
             max-width: 480px;
-            z-index: 1000;
+            z-index: 9999;
         }
 
         .nav-tab {
@@ -223,11 +227,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             display: none;
             justify-content: center;
             align-items: flex-end;
-            z-index: 1000;
+            z-index: 10000;
         }
 
         .profile-card {
@@ -235,8 +241,11 @@
             width: 100%;
             max-width: 480px;
             border-radius: 30px 30px 0 0;
-            padding: 40px 24px;
+            padding: 40px 24px 100px;
+            /* Extra bottom padding for navbar */
             animation: slideUp 0.3s ease-out;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         @keyframes slideUp {
@@ -486,14 +495,10 @@
                 </div>
             </div>
 
-            <!-- Map View (Hidden by default) -->
-            <div id="view-map" style="display: none; height: 100%; position: relative;">
-                <div id="exploration-map"
-                    style="width: 100%; height: calc(100vh - 160px); border-radius: 20px; overflow: hidden; margin-top: 10px;">
-                </div>
-                <div style="padding: 15px; text-align: center;">
-                    <p style="font-size: 13px; color: var(--text-muted);">Explore nearby drivers and pickup points</p>
-                </div>
+            <!-- Full Screen Map View -->
+            <div id="view-map"
+                style="display: none; height: 100vh; width: 100%; position: absolute; top: 0; left: 0; z-index: 100;">
+                <div id="exploration-map" style="width: 100%; height: 100%;"></div>
             </div>
         </div>
 
@@ -504,9 +509,12 @@
             <a href="#" class="nav-tab" id="nav-map" onclick="event.preventDefault(); window.switchTab('map')"><i
                     class='bx bxs-map-alt'></i>
                 Map</a>
-            <a href="#" class="nav-tab" id="nav-history" onclick="openHistory()"><i class='bx bxs-time-five'></i>
+            <a href="#" class="nav-tab" id="nav-history"
+                onclick="event.preventDefault(); window.switchTab('history')"><i class='bx bxs-time-five'></i>
                 History</a>
-            <a href="#" id="nav-profile" class="nav-tab"><i class='bx bxs-user-circle'></i> Profile</a>
+            <a href="#" id="nav-profile" class="nav-tab"
+                onclick="event.preventDefault(); window.switchTab('profile')"><i class='bx bxs-user-circle'></i>
+                Profile</a>
         </nav>
 
         <!-- History Overlay (Bottom Sheet) -->
@@ -529,8 +537,8 @@
                         history yet.</p>
                 </div>
 
-                <button onclick="closeHistory()" class="btn"
-                    style="background: #f1f5f9; color: var(--text-main); margin-top: 30px; width: 100%; height: 50px;">Close</button>
+                <button onclick="window.closeHistory()" class="btn"
+                    style="background: #f1f5f9; color: var(--text-main); margin-top: 30px; width: 100%; height: 50px; font-weight: 600;">Close</button>
             </div>
         </div>
 
@@ -571,9 +579,8 @@
                     <a href="terms.html" class="menu-item"><i class='bx bx-shield-quarter'></i> Terms & Conditions</a>
                     <a href="#" onclick="logout()" class="menu-item logout-btn"><i class='bx bx-log-out'></i> Logout</a>
                 </div>
-
                 <button onclick="document.getElementById('profileOverlay').style.display='none'" class="btn"
-                    style="background: #f1f5f9; color: var(--text-main); margin-top: 20px;">Close</button>
+                    style="background: #f1f5f9; color: var(--text-main); margin-top: 30px; width: 100%; height: 50px; font-weight: 700;">Close</button>
             </div>
         </div>
 
@@ -621,8 +628,9 @@
                             style="width: 100%; padding: 12px; border: 1px solid #eef2f6; border-radius: 12px; font-size: 14px; outline: none; transition: all 0.2s;"
                             onfocus="this.style.borderColor='var(--secondary)'">
                     </div>
-                    <button onclick="saveEmergencyContact()" class="btn" style="width: 100%; height: 50px;">Save Contact
-                        Details</button>
+                    <button onclick="window.saveEmergencyContact(event)" class="btn"
+                        style="width: 100%; height: 52px; background: var(--primary); color: white; font-weight: 700; font-size: 15px; border-radius: 16px;">Save
+                        Contact Details</button>
                 </div>
             </div>
         </div>
@@ -682,8 +690,8 @@
                     </div>
                 </div>
 
-                <button id="save-profile-btn" onclick="saveProfile()" class="btn"
-                    style="width: 100%; height: 50px; background: var(--secondary); font-size: 14px; font-weight: 700;">Save
+                <button id="save-profile-btn" onclick="window.saveProfile()" class="btn"
+                    style="width: 100%; height: 56px; background: var(--secondary); color: white; font-size: 16px; font-weight: 700; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">Save
                     Changes</button>
             </div>
         </div>

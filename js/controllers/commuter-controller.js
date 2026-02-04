@@ -5,7 +5,7 @@ import * as CommuterRides from '../services/commuter-rides.js';
 import * as CommuterProfile from '../services/commuter-profile.js';
 import * as CommuterChat from '../services/commuter-chat.js';
 import * as AudioService from '../services/audio.js';
-import { applyTheme, activateSOSUI } from '../utils/ui.js';
+import { applyTheme, activateSOSUI, showConfirm } from '../utils/ui.js';
 
 // State
 let currentUser = null;
@@ -93,16 +93,13 @@ function setupListeners() {
     }
     if (elements.profileBtn) {
         elements.profileBtn.addEventListener('click', () => {
+            const header = document.querySelector('.app-header');
+            if (header) header.style.display = 'none';
             elements.profileOverlay.style.display = 'flex';
         });
     }
     const navProfile = document.getElementById('nav-profile');
-    if (navProfile) {
-        navProfile.addEventListener('click', (e) => {
-            e.preventDefault();
-            elements.profileOverlay.style.display = 'flex';
-        });
-    }
+    // Switched to HTML onclick for switchTab consistency
 
     // Navbar Switching handled via HTML onclick
 
@@ -440,7 +437,7 @@ window.requestRide = async () => {
 };
 
 window.cancelRide = async (rideId) => {
-    if (!confirm('Are you sure you want to cancel this request?')) return;
+    if (!await showConfirm('Are you sure you want to cancel this request?')) return;
     try {
         await CommuterRides.cancelRide(rideId);
         await checkActiveRide();
@@ -450,7 +447,7 @@ window.cancelRide = async (rideId) => {
 };
 
 window.cancelAllMyRides = async () => {
-    if (!confirm('This will clear your pending requests. Continue?')) return;
+    if (!await showConfirm('This will clear your pending requests. Continue?')) return;
     try {
         await CommuterRides.cancelAllPendingRides(currentUser.id);
         await checkActiveRide();
@@ -491,7 +488,7 @@ window.dismissCompletion = async (rideId) => {
 };
 
 window.triggerEmergency = async (rideId) => {
-    if (!confirm("🚨 DO YOU NEED EMERGENCY ASSISTANCE? This will alert the TMO and local authorities immediately.")) return;
+    if (!await showConfirm("🚨 DO YOU NEED EMERGENCY ASSISTANCE? This will alert the TMO and local authorities immediately.")) return;
 
     try {
         const pos = await new Promise((res, rej) => {
@@ -560,6 +557,8 @@ window.sendChat = async () => {
 window.logout = () => CommuterAuth.logoutPassenger();
 
 window.openHistory = async () => {
+    const header = document.querySelector('.app-header');
+    if (header) header.style.display = 'none';
     elements.historyOverlay.style.display = 'flex';
     await CommuterRides.fetchTripHistory(currentUser.id).then(updateTripHistoryUI);
     await loadSuggestions();
@@ -567,6 +566,8 @@ window.openHistory = async () => {
 
 window.closeHistory = (e) => {
     if (e && e.target !== e.currentTarget) return;
+    const header = document.querySelector('.app-header');
+    if (header && document.getElementById('view-home').style.display !== 'none') header.style.display = 'flex';
     elements.historyOverlay.style.display = 'none';
 };
 
@@ -584,6 +585,7 @@ window.openEmergencyContact = async () => {
 window.closeEmergencyContact = (e) => {
     if (e && e.target !== e.currentTarget) return;
     elements.emergencyContactOverlay.style.display = 'none';
+    elements.profileOverlay.style.display = 'flex'; // Go back to profile
 };
 
 window.saveEmergencyContact = async (e) => {
@@ -605,8 +607,9 @@ window.saveEmergencyContact = async (e) => {
     } catch (err) {
         alert(err.message);
     } finally {
-        btn.innerText = "Save to Database";
+        btn.innerText = "Save Contact Details";
         btn.disabled = false;
+        btn.style.color = "white";
     }
 };
 
@@ -625,6 +628,7 @@ window.openEditProfile = () => {
 window.closeEditProfile = (e) => {
     if (e && e.target !== e.currentTarget) return;
     elements.editProfileOverlay.style.display = 'none';
+    elements.profileOverlay.style.display = 'flex'; // Go back to profile instead of home
 };
 
 window.previewAvatar = (input) => {
@@ -657,6 +661,7 @@ window.saveProfile = async () => {
     } finally {
         btn.innerText = 'Save Changes';
         btn.disabled = false;
+        btn.style.color = 'white'; // Ensure text color is reset
     }
 };
 
@@ -812,6 +817,8 @@ async function autoLocateUser() {
 
 window.closeProfile = (e) => {
     if (e && e.target !== e.currentTarget) return;
+    const header = document.querySelector('.app-header');
+    if (header && document.getElementById('view-map').style.display === 'none') header.style.display = 'flex';
     elements.profileOverlay.style.display = 'none';
 };
 
@@ -856,26 +863,49 @@ window.switchTab = (tab) => {
     console.log('Switching tab to:', tab);
     const homeView = document.getElementById('view-home');
     const mapView = document.getElementById('view-map');
+    const header = document.querySelector('.app-header');
+
     const navHome = document.getElementById('nav-home');
     const navMap = document.getElementById('nav-map');
+    const navHistory = document.getElementById('nav-history');
+    const navProfile = document.getElementById('nav-profile');
 
-    if (tab === 'home') {
+    // Hide all overlays first
+    const overlays = ['profileOverlay', 'historyOverlay', 'editProfileOverlay', 'emergencyContactOverlay'];
+    overlays.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Reset view visibility
+    if (homeView) homeView.style.display = 'none';
+    if (mapView) mapView.style.display = 'none';
+    if (header) header.style.display = 'flex';
+
+    // Remove active class from all tabs
+    [navHome, navMap, navHistory, navProfile].forEach(el => {
+        if (el) el.classList.remove('active');
+    });
+
+    if (tab === 'home' && homeView) {
         homeView.style.display = 'block';
-        mapView.style.display = 'none';
-        navHome.classList.add('active');
-        if (navMap) navMap.classList.remove('active');
-
-        // If we have an active ride, we need to re-attach the tracking map
-        // because the singleton map instance might have been hijacked by the exploration map
+        if (navHome) navHome.classList.add('active');
         checkActiveRide();
-    } else if (tab === 'map') {
-        homeView.style.display = 'none';
+    } else if (tab === 'map' && mapView) {
         mapView.style.display = 'block';
-        navHome.classList.remove('active');
+        if (header) header.style.display = 'none';
         if (navMap) navMap.classList.add('active');
-
-        // Initialize Map with a slight delay to ensure container is visible
         setTimeout(initExplorationMap, 100);
+    } else if (tab === 'history') {
+        if (homeView) homeView.style.display = 'block';
+        if (header) header.style.display = 'none';
+        if (navHistory) navHistory.classList.add('active');
+        window.openHistory();
+    } else if (tab === 'profile') {
+        if (homeView) homeView.style.display = 'block';
+        if (header) header.style.display = 'none';
+        if (navProfile) navProfile.classList.add('active');
+        if (elements.profileOverlay) elements.profileOverlay.style.display = 'flex';
     }
 };
 
