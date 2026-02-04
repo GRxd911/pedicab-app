@@ -610,7 +610,7 @@ function startTrackingLocation() {
 }
 
 // Show route for active ride
-async function showNavigationRoute(pickup, dropoff) {
+async function showNavigationRoute(ride) {
     if (!driverMap) {
         // Wait for map init
         await new Promise(r => setTimeout(r, 1000));
@@ -620,30 +620,37 @@ async function showNavigationRoute(pickup, dropoff) {
     clearAllMarkers();
     clearRoute();
 
-    // Add current location
-    addDriverMarker(currentUser.id, currentDriverLat, currentDriverLng, "You");
+    // 1. Add Driver Current Location
+    if (currentDriverLat && currentDriverLng) {
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`driver-${currentUser.id}`, currentDriverLat, currentDriverLng, {
+            icon: userIcon,
+            title: "You",
+            popup: "Your Current Position"
+        });
+    }
 
-    // Geocode pickup/dropoff (simplified, ideally usage of lat/lng from ride DB)
-    const p = await geocodeAddress(pickup);
-    const d = await geocodeAddress(dropoff);
+    // 2. Add Pickup & Dropoff from Ride Coordinates (Very Accurate)
+    const points = [];
+    if (currentDriverLat && currentDriverLng) points.push({ lat: currentDriverLat, lng: currentDriverLng });
 
-    if (p) addPassengerMarker('pickup', p.lat, p.lng, `Pickup: ${pickup}`);
-    if (d) addDestinationMarker(d.lat, d.lng, `Dropoff: ${dropoff}`);
+    if (ride.pickup_lat && ride.pickup_lng) {
+        addPassengerMarker('pickup', ride.pickup_lat, ride.pickup_lng, `Pickup: ${ride.pickup_location}`);
+        points.push({ lat: ride.pickup_lat, lng: ride.pickup_lng });
+    }
 
-    if (p && d && currentDriverLat && currentDriverLng) {
-        // Draw route: Driver -> Pickup -> Dropoff
-        drawMultiPointRoute([
-            { lat: currentDriverLat, lng: currentDriverLng },
-            { lat: p.lat, lng: p.lng },
-            { lat: d.lat, lng: d.lng }
-        ], {
+    if (ride.dropoff_lat && ride.dropoff_lng) {
+        addDestinationMarker(ride.dropoff_lat, ride.dropoff_lng, `Dropoff: ${ride.dropoff_location}`);
+        points.push({ lat: ride.dropoff_lat, lng: ride.dropoff_lng });
+    }
+
+    // 3. Draw Route
+    if (points.length >= 2) {
+        drawMultiPointRoute(points, {
             onRouteFound: (summary) => {
-                // Could update UI with distance/ETA here
                 console.log(`Route Found: ${summary.distance}km, ${summary.duration}min`);
             }
         });
-
-        // Auto-zoom
         fitBounds();
     }
 }
@@ -653,8 +660,8 @@ const originalShowActiveRideUI = showActiveRideUI;
 showActiveRideUI = function (ride) {
     originalShowActiveRideUI(ride);
 
-    // Trigger map update
-    showNavigationRoute(ride.pickup_location, ride.dropoff_location);
+    // Trigger map update with the ride object (contains coordinates)
+    showNavigationRoute(ride);
 
     // Ensure map container is visible
     const mapDiv = document.getElementById('driver-map');
