@@ -316,11 +316,18 @@
 
         .view-content {
             display: none;
-            height: calc(100vh - 80px);
+            height: calc(100vh - 84px);
             /* Height above navbar */
-            overflow: hidden;
+            overflow-y: auto;
+            /* Enable scrolling */
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 20px;
             background: #f1f5f9;
-            /* Light grey background like image */
+        }
+
+        /* Fix for iPhone Safe Areas (Notch) */
+        .driver-header {
+            padding-top: max(24px, env(safe-area-inset-top));
         }
 
         .view-content.active {
@@ -350,7 +357,7 @@
         .navbar {
             display: flex;
             justify-content: space-around;
-            padding: 16px;
+            padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
             background: white;
             border-top: 1px solid #f1f5f9;
             position: fixed;
