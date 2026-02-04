@@ -697,6 +697,17 @@ function updateAvailableDriversUI(drivers) {
     }
 }
 
+const shortenAddress = (addr) => {
+    if (!addr) return '';
+    const parts = addr.split(',');
+    let short = parts[0].trim();
+    // If first part is just a number (like street number), try including the second part
+    if (short.match(/^\d+$/) && parts.length > 1) {
+        short += ' ' + parts[1].trim();
+    }
+    return short.length > 25 ? short.substring(0, 22) + '...' : short;
+};
+
 function updateTripHistoryUI(trips) {
     const container = document.getElementById('trip-history');
     if (trips && trips.length > 0) {
@@ -721,14 +732,14 @@ function updateTripHistoryUI(trips) {
                             <div style="position: absolute; left: -18px; top: 4px; width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div>
                             <div>
                                 <p style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Pickup</p>
-                                <p style="font-size: 13px; color: var(--text-main); font-weight: 500;">${t.pickup_location}</p>
+                                <p style="font-size: 13px; color: var(--text-main); font-weight: 500;">${shortenAddress(t.pickup_location)}</p>
                             </div>
                         </div>
                         <div style="display: flex; align-items: start; gap: 10px; position: relative; margin-top: 4px;">
                             <div style="position: absolute; left: -19px; top: 4px; width: 8px; height: 8px; color: #ef4444;"><i class='bx bxs-map' style="font-size: 10px;"></i></div>
                             <div>
                                 <p style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Drop-off</p>
-                                <p style="font-size: 13px; color: var(--text-main); font-weight: 600;">${t.dropoff_location}</p>
+                                <p style="font-size: 13px; color: var(--text-main); font-weight: 600;">${shortenAddress(t.dropoff_location)}</p>
                             </div>
                         </div>
                     </div>
@@ -753,11 +764,15 @@ async function loadSuggestions() {
     const suggestions = await CommuterRides.fetchSuggestions(currentUser.id);
     const container = document.getElementById('frequent-routes');
     if (container && suggestions.length > 0) {
-        container.innerHTML = suggestions.map(r => `
-            <div class="suggestion-chip" onclick="window.useRoute('${r}')">
-                <i class='bx bx-history'></i> ${r}
-            </div>
-        `).join('');
+        container.innerHTML = suggestions.map(r => {
+            const [p, d] = r.split(' → ');
+            const display = `${shortenAddress(p)} → ${shortenAddress(d)}`;
+            return `
+                <div class="suggestion-chip" onclick="window.useRoute('${r}')">
+                    <i class='bx bx-history'></i> ${display}
+                </div>
+            `;
+        }).join('');
     }
 }
 

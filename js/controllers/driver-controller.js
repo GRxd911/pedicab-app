@@ -159,10 +159,22 @@ async function renderPendingRides(rides) {
             <div id="waiting-msg" style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px; background: white; margin: 0 20px 20px; border-radius: 24px;">
                 Searching for passenger requests...
             </div>`;
+        // Clear passenger markers when no requests
+        clearAllMarkers();
+        if (currentDriverLat && currentDriverLng) {
+            addDriverMarker(currentUser.id, currentDriverLat, currentDriverLng, 'You');
+        }
         return;
     }
 
     container.innerHTML = '';
+
+    // Clear existing markers and re-add driver
+    clearAllMarkers();
+    if (currentDriverLat && currentDriverLng) {
+        addDriverMarker(currentUser.id, currentDriverLat, currentDriverLng, 'You');
+    }
+
     rides.forEach(ride => {
         const userData = ride.passenger || { fullname: 'Passenger' };
         const passengerName = userData.fullname;
@@ -191,7 +203,15 @@ async function renderPendingRides(rides) {
             </div>
         `;
         container.appendChild(card);
+
+        // Add passenger marker to map if coordinates exist
+        if (ride.pickup_lat && ride.pickup_lng) {
+            addPassengerMarker(ride.ride_id, ride.pickup_lat, ride.pickup_lng, passengerName);
+        }
     });
+
+    // Fit map to show all markers (driver + passengers)
+    fitBounds();
 }
 
 function showActiveRideUI(ride) {
