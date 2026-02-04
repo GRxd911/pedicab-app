@@ -314,19 +314,37 @@
             z-index: 1;
         }
 
-        #exploration-map {
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
         .view-content {
             display: none;
-            padding-bottom: 90px;
+            height: calc(100vh - 80px);
+            /* Height above navbar */
+            overflow: hidden;
+            background: #f1f5f9;
+            /* Light grey background like image */
         }
 
         .view-content.active {
             display: block;
+        }
+
+        #view-map {
+            padding: 10px;
+        }
+
+        #view-map .map-container-premium {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+
+        #exploration-map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
 
         .navbar {
@@ -648,15 +666,18 @@
         </div>
 
         <!-- FULL MAP VIEW -->
-        <div id="view-map" class="view-content" style="height: calc(100vh - 80px);">
-            <div id="exploration-map" style="width: 100%; height: 100%;"></div>
+        <div id="view-map" class="view-content">
+            <div class="map-container-premium">
+                <div id="exploration-map"></div>
+            </div>
         </div>
 
         <nav class="navbar">
             <a href="#" id="nav-home" onclick="switchTab('home')" class="nav-tab active"><i
                     class='bx bxs-home-alt-2'></i> Home</a>
             <a href="#" id="nav-map" onclick="switchTab('map')" class="nav-tab"><i class='bx bxs-map-alt'></i> Map</a>
-            <a href="#" id="earningsTab" class="nav-tab"><i class='bx bxs-bar-chart-alt-2'></i> Earnings</a>
+            <a href="#" id="nav-history" onclick="switchTab('history')" class="nav-tab"><i class='bx bxs-time-five'></i>
+                History</a>
             <a href="#" id="profileTab" class="nav-tab"><i class='bx bxs-user-circle'></i> Profile</a>
         </nav>
 

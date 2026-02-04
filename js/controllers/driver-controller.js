@@ -677,23 +677,29 @@ window.switchTab = (tab) => {
     const mapView = document.getElementById('view-map');
     const navHome = document.getElementById('nav-home');
     const navMap = document.getElementById('nav-map');
+    const navHistory = document.getElementById('nav-history');
+
+    // Reset all
+    homeView.classList.remove('active');
+    mapView.classList.remove('active');
+    navHome.classList.remove('active');
+    navMap.classList.remove('active');
+    if (navHistory) navHistory.classList.remove('active');
 
     if (tab === 'home') {
         homeView.classList.add('active');
-        mapView.classList.remove('active');
         navHome.classList.add('active');
-        navMap.classList.remove('active');
-
-        // Always ensure the home map is updated
         checkContextAndLoad();
     } else if (tab === 'map') {
-        homeView.classList.remove('active');
         mapView.classList.add('active');
-        navHome.classList.remove('active');
         navMap.classList.add('active');
-
-        // Initialize larger map
         setTimeout(initExplorationMap, 100);
+    } else if (tab === 'history') {
+        homeView.classList.add('active');
+        if (navHistory) navHistory.classList.add('active');
+        document.getElementById('earningsOverlay').style.display = 'flex';
+        // loadEarnings is called internally by init or logic, but let's ensure it's up to date
+        if (window.loadEarnings) window.loadEarnings();
     }
 };
 

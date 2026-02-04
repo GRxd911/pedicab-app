@@ -129,8 +129,11 @@ export function removeMarker(id) {
  */
 export function addDriverMarker(driverId, lat, lng, driverName = 'Driver') {
     const icon = `
-        <div style="background: #10b981; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3); transform: translateY(-5px);">
-            <i class='bx bxs-car' style="color: white; font-size: 22px;"></i>
+        <div class="driver-marker-premium">
+            <div class="marker-halo"></div>
+            <div class="marker-core">
+                <i class='bx bxs-car'></i>
+            </div>
         </div>
     `;
 
