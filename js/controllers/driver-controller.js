@@ -496,28 +496,33 @@ window.switchTab = (tab) => {
     const navHistory = document.getElementById('nav-history');
     const navProfile = document.getElementById('nav-profile');
 
-    if (homeView) homeView.classList.remove('active');
-    if (mapView) mapView.classList.remove('active');
-    if (navHome) navHome.classList.remove('active');
-    if (navMap) navMap.classList.remove('active');
-    if (navHistory) navHistory.classList.remove('active');
-    if (navProfile) navProfile.classList.remove('active');
+    // Hide all overlays first
+    const overlays = ['profileOverlay', 'earningsOverlay', 'editProfileOverlay'];
+    overlays.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Remove active class from all tabs
+    [navHome, navMap, navHistory, navProfile].forEach(el => {
+        if (el) el.classList.remove('active');
+    });
 
     if (tab === 'home' && homeView) {
+        if (mapView) mapView.classList.remove('active');
         homeView.classList.add('active');
-        navHome.classList.add('active');
+        if (navHome) navHome.classList.add('active');
         checkContextAndLoad();
     } else if (tab === 'map' && mapView) {
+        if (homeView) homeView.classList.remove('active');
         mapView.classList.add('active');
-        navMap.classList.add('active');
+        if (navMap) navMap.classList.add('active');
         setTimeout(initExplorationMap, 100);
     } else if (tab === 'history') {
-        homeView.classList.add('active');
         if (navHistory) navHistory.classList.add('active');
         document.getElementById('earningsOverlay').style.display = 'flex';
         loadEarnings();
     } else if (tab === 'profile') {
-        homeView.classList.add('active');
         if (navProfile) navProfile.classList.add('active');
         document.getElementById('profileOverlay').style.display = 'flex';
     }
