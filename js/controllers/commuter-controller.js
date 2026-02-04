@@ -297,8 +297,14 @@ window.requestRide = async () => {
 
     try {
         elements.requestBtn.disabled = true;
+        elements.requestBtn.innerText = 'Geocoding...';
+
+        // Geocode both locations
+        const pickupCoords = await geocodeAddress(pickup);
+        const dropoffCoords = await geocodeAddress(dropoff);
+
         elements.requestBtn.innerText = 'Requesting...';
-        await CommuterRides.requestRide(currentUser.id, pickup, dropoff);
+        await CommuterRides.requestRide(currentUser.id, pickup, dropoff, pickupCoords, dropoffCoords);
         elements.pickupInput.value = '';
         elements.dropoffInput.value = '';
         await checkActiveRide();
@@ -698,12 +704,21 @@ function initPassengerMap() {
         currentPassengerLng = pos.lng;
 
         passengerMap = initMap('passenger-map', { lat: pos.lat, lng: pos.lng });
-        addPassengerMarker(currentUser.id, pos.lat, pos.lng, "You");
+
+        // Add pulsating user marker
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
+            icon: userIcon,
+            title: "You",
+            popup: "Your Current Location"
+        });
     });
 }
 
 // Start tracking driver during active ride
 function startTrackingDriver(driverId, pickup, dropoff) {
+    console.log('🚀 Starting Real-time tracking for driver:', driverId);
+
     // Show map container
     const mapContainer = document.getElementById('tracking-map-container');
     if (mapContainer) mapContainer.style.display = 'block';
@@ -711,16 +726,55 @@ function startTrackingDriver(driverId, pickup, dropoff) {
     // Init map if needed
     initPassengerMap();
 
-    // Clear previous intervals
-    if (driverLocationInterval) clearInterval(driverLocationInterval);
-
-    // Initial map setup with route
+    // Initial map setup
     setupRideMap(driverId, pickup, dropoff);
 
-    // Poll driver location every 5 seconds
-    driverLocationInterval = setInterval(() => {
-        updateDriverLocationOnMap(driverId);
-    }, 5000);
+    // REAL-TIME: Listen for driver location changes
+    if (driverLocationInterval) {
+        // Unsubscribe if exists (clean up)
+        supabaseClient.removeChannel(driverLocationInterval);
+    }
+
+    driverLocationInterval = supabaseClient
+        .channel(`driver-tracking-${driverId}`)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            table: 'drivers',
+            filter: `driver_id=eq.${driverId}`
+        }, payload => {
+            console.log('📍 Real-time location update:', payload.new);
+            handleLocationUpdate(payload.new);
+        })
+        .subscribe();
+}
+
+async function handleLocationUpdate(driverData) {
+    if (!driverData.current_lat || !driverData.current_lng) return;
+
+    // Update driver marker smoothly
+    updateMarkerPosition(`driver-${driverData.driver_id}`, driverData.current_lat, driverData.current_lng);
+
+    // Auto-center map if driver is out of view or just follow them
+    // We only follow if the map hasn't been panned manually (simplified: always follow for now)
+    centerMap(driverData.current_lat, driverData.current_lng);
+
+    // If we have passenger location, update stats
+    if (currentPassengerLat && currentPassengerLng) {
+        const dist = calculateDistance(
+            currentPassengerLat, currentPassengerLng,
+            driverData.current_lat, driverData.current_lng
+        );
+
+        // Update UI stats
+        const distEl = document.getElementById('tracking-distance');
+        const etaEl = document.getElementById('tracking-eta');
+
+        if (distEl) distEl.innerText = `${dist.toFixed(2)} km`;
+        if (etaEl) {
+            const eta = Math.ceil(dist * 6); // 6 mins per km is safer for pedicabs
+            etaEl.innerText = eta < 1 ? 'Less than 1 min' : `${eta} mins`;
+        }
+    }
 }
 
 async function setupRideMap(driverId, pickup, dropoff) {
@@ -731,59 +785,36 @@ async function setupRideMap(driverId, pickup, dropoff) {
 
     // Add passenger location
     if (currentPassengerLat && currentPassengerLng) {
-        addPassengerMarker(currentUser.id, currentPassengerLat, currentPassengerLng, "You");
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`passenger-${currentUser.id}`, currentPassengerLat, currentPassengerLng, {
+            icon: userIcon,
+            title: "You",
+            popup: "Your Current Location"
+        });
     }
 
-    // Geocode locations if needed
-    // For now, assuming pickup/dropoff are names, we'd need coordinates
-    // This part requires the rides table to have coordinates populated
-    // We'll update the markers once we have the driver's location
+    // Fetch initial driver location
+    const { data: driverData } = await supabaseClient
+        .from('drivers')
+        .select('*')
+        .eq('driver_id', driverId)
+        .single();
 
-    updateDriverLocationOnMap(driverId);
-}
-
-async function updateDriverLocationOnMap(driverId) {
-    try {
-        const { data, error } = await supabaseClient
-            .from('drivers')
-            .select('current_lat, current_lng, users(fullname)')
-            .eq('driver_id', driverId)
-            .single();
-
-        if (error) throw error;
-
-        if (data && data.current_lat && data.current_lng) {
-            // Update driver marker
-            addDriverMarker(driverId, data.current_lat, data.current_lng, data.users?.fullname || 'Driver');
-
-            // If we have passenger location, draw route
-            if (currentPassengerLat && currentPassengerLng) {
-                // Draw route from driver to passenger (or to dropoff if accepted)
-                // For simplified version, just fit bounds
-                fitBounds();
-
-                // Calculate distance/ETA
-                const dist = calculateDistance(
-                    currentPassengerLat, currentPassengerLng,
-                    data.current_lat, data.current_lng
-                );
-
-                // Update UI stats
-                const distEl = document.getElementById('tracking-distance');
-                const etaEl = document.getElementById('tracking-eta');
-
-                if (distEl) distEl.innerText = `${dist.toFixed(1)} km`;
-                if (etaEl) etaEl.innerText = `${Math.ceil(dist * 5)} mins`; // Rough estimate: 5 min per km
-            }
-        }
-    } catch (err) {
-        console.error('Error updating driver location:', err);
+    if (driverData) {
+        // Initial marker placement
+        addDriverMarker(driverId, driverData.current_lat, driverData.current_lng, driverData.users?.fullname || 'Driver');
+        handleLocationUpdate(driverData);
     }
 }
+
 
 function stopTrackingDriver() {
     if (driverLocationInterval) {
-        clearInterval(driverLocationInterval);
+        if (typeof driverLocationInterval === 'number') {
+            clearInterval(driverLocationInterval);
+        } else {
+            supabaseClient.removeChannel(driverLocationInterval);
+        }
         driverLocationInterval = null;
     }
     const mapContainer = document.getElementById('tracking-map-container');

@@ -571,7 +571,14 @@ function initDriverMap() {
         currentDriverLng = pos.lng;
 
         driverMap = initMap('driver-map', { lat: pos.lat, lng: pos.lng });
-        addDriverMarker(currentUser.id, pos.lat, pos.lng, "You");
+
+        // Add pulsating self marker
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`driver-${currentUser.id}`, pos.lat, pos.lng, {
+            icon: userIcon,
+            title: "You",
+            popup: "Your Current Position"
+        });
 
         // Start tracking location
         startTrackingLocation();
@@ -586,16 +593,12 @@ function startTrackingLocation() {
         currentDriverLat = pos.lat;
         currentDriverLng = pos.lng;
 
-        // Update local map marker
+        // Update local map marker smoothly
         if (driverMap) {
             updateMarkerPosition(`driver-${currentUser.id}`, pos.lat, pos.lng);
-
-            // Re-center map if following enabled (simplified: always center if not interacting)
-            // centerMap(pos.lat, pos.lng); 
         }
 
-        // Update database (throttled to every 5s logic handled by watchPosition or separate interval)
-        // Here we just update on change. Ideally throttle this in production.
+        // Update database
         try {
             if (currentStatus === 'online') {
                 await updateDriverLocation(currentUser.id, pos.lat, pos.lng);

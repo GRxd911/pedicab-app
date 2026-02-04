@@ -27,7 +27,7 @@ export async function fetchLastCompletedRide(userId) {
     return completedRide && completedRide.length > 0 ? completedRide[0] : null;
 }
 
-export async function requestRide(userId, pickup, dropoff) {
+export async function requestRide(userId, pickup, dropoff, pickupCoords = null, dropoffCoords = null) {
     // Check if user already has an active ride
     const { data: active } = await supabaseClient
         .from('rides')
@@ -45,6 +45,10 @@ export async function requestRide(userId, pickup, dropoff) {
             passenger_id: userId,
             pickup_location: pickup,
             dropoff_location: dropoff,
+            pickup_lat: pickupCoords?.lat,
+            pickup_lng: pickupCoords?.lng,
+            dropoff_lat: dropoffCoords?.lat,
+            dropoff_lng: dropoffCoords?.lng,
             price: 0,
             status: 'pending'
         }])

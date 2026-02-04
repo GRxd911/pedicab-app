@@ -77,10 +77,40 @@ export function addMarker(id, lat, lng, options = {}) {
 /**
  * Update marker position with smooth animation
  */
-export function updateMarkerPosition(id, lat, lng) {
+export function updateMarkerPosition(id, lat, lng, icon = null) {
     if (markers[id]) {
-        const newLatLng = L.latLng(lat, lng);
-        markers[id].setLatLng(newLatLng);
+        const marker = markers[id];
+        const startLatLng = marker.getLatLng();
+        const endLatLng = L.latLng(lat, lng);
+
+        // Simple linear interpolation for smoothness if distance is small
+        const duration = 1000; // 1s animation
+        const start = performance.now();
+
+        function animate(time) {
+            const elapsed = time - start;
+            const progress = Math.min(elapsed / duration, 1);
+
+            const currentLat = startLatLng.lat + (endLatLng.lat - startLatLng.lat) * progress;
+            const currentLng = startLatLng.lng + (endLatLng.lng - startLatLng.lng) * progress;
+
+            marker.setLatLng([currentLat, currentLng]);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        requestAnimationFrame(animate);
+
+        if (icon) {
+            marker.setIcon(L.divIcon({
+                className: 'custom-marker',
+                html: icon,
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            }));
+        }
     }
 }
 
