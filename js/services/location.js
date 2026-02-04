@@ -6,35 +6,61 @@ const DEFAULT_LOCATION = { lat: 9.3068, lng: 123.3033 };
 
 /**
  * Get current GPS position with high accuracy
+ * Waits for a high-accuracy reading (accuracy < 60m) or a timeout
  */
 export async function getCurrentPosition() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         if (!navigator.geolocation) {
             resolve(DEFAULT_LOCATION);
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
+        let hasResolved = false;
+        let bestReading = null;
+
+        const watchId = navigator.geolocation.watchPosition(
             (position) => {
-                const pos = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                };
-                console.log(`Location lock acquired: ${pos.accuracy}m accuracy`);
-                resolve(pos);
+                const { latitude, longitude, accuracy } = position.coords;
+                console.log(`GPS Reading: ${accuracy.toFixed(1)}m accuracy`);
+
+                // Store the best reading we've seen so far
+                if (!bestReading || accuracy < bestReading.accuracy) {
+                    bestReading = { lat: latitude, lng: longitude, accuracy };
+                }
+
+                // If we get a very good reading (under 40 meters), resolve immediately
+                if (accuracy <= 40 && !hasResolved) {
+                    hasResolved = true;
+                    navigator.geolocation.clearWatch(watchId);
+                    console.log("✅ High accuracy lock acquired!");
+                    resolve(bestReading);
+                }
             },
             (error) => {
-                console.warn('Geolocation error:', error.message);
-                // If it's a timeout, maybe try one more time or just fallback
-                resolve(DEFAULT_LOCATION);
+                console.warn('GPS Wait Error:', error.message);
+                if (!hasResolved) {
+                    hasResolved = true;
+                    navigator.geolocation.clearWatch(watchId);
+                    resolve(bestReading || DEFAULT_LOCATION);
+                }
             },
             {
                 enableHighAccuracy: true,
-                timeout: 15000,    // Increased to 15s for better indoor lock
-                maximumAge: 0     // No caching for precise location
+                maximumAge: 0,
+                timeout: 10000 // Total wait time for a "good" lock
             }
         );
+
+        // Safety timeout: If we haven't found a "perfect" lock in 7 seconds, 
+        // take whatever the best reading we found was.
+        setTimeout(() => {
+            if (!hasResolved) {
+                hasResolved = true;
+                navigator.geolocation.clearWatch(watchId);
+                console.log("⏱️ GPS lock timed out, using best available reading:", bestReading ? `${bestReading.accuracy}m` : 'None');
+                resolve(bestReading || DEFAULT_LOCATION);
+            }
+        }, 7000);
     });
 }
 
@@ -177,12 +203,18 @@ export async function geocodeAddress(address) {
  */
 export async function reverseGeocode(lat, lng) {
     try {
+        // Added zoom=18 for street-level precision and address details
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
         );
         const data = await response.json();
 
         if (data && data.display_name) {
+            // Try to get a shorter, cleaner address if possible (Road + City)
+            const addr = data.address;
+            if (addr && addr.road && (addr.city || addr.town || addr.municipality)) {
+                return `${addr.road}, ${addr.city || addr.town || addr.municipality}`;
+            }
             return data.display_name;
         }
     } catch (error) {

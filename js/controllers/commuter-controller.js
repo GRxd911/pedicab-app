@@ -650,24 +650,35 @@ function showCityAlert(message) {
 // --- HELPER FUNCTIONS ---
 
 async function autoLocateUser() {
-    if (elements.pickupInput.value) return; // Don't overwrite if already filled
+    if (elements.pickupInput.value) return;
 
     try {
-        elements.pickupInput.placeholder = "Getting current location...";
+        elements.pickupInput.placeholder = "🔍 Finding your precise location...";
+
+        // This now waits up to 7s for a high-accuracy GPS lock
         const pos = await getCurrentPosition();
 
         if (pos) {
-            // Store for map use
             currentPassengerLat = pos.lat;
             currentPassengerLng = pos.lng;
 
-            // Reverse geocode to get address
+            // Update map marker instantly to where the GPS says (regardless of address)
+            if (passengerMap) {
+                const userIcon = `<div class="user-location-marker"></div>`;
+                addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
+                    icon: userIcon,
+                    title: "You",
+                    popup: `Current Accuracy: ${Math.round(pos.accuracy || 0)}m`
+                });
+                centerMap(pos.lat, pos.lng, 17); // Zoom in closer
+            }
+
             const address = await reverseGeocode(pos.lat, pos.lng);
 
             if (address) {
                 elements.pickupInput.value = address;
-                // Add a cute icon or indicator that it was auto-detected
-                elements.pickupInput.style.border = "1px solid #10b981";
+                elements.pickupInput.style.border = "2px solid #10b981";
+                elements.pickupInput.style.background = "#f0fdf4";
             }
         }
     } catch (e) {
