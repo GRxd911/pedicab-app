@@ -5,7 +5,7 @@ import { supabaseClient } from './config.js';
 const DEFAULT_LOCATION = { lat: 9.3068, lng: 123.3033 };
 
 /**
- * Get current GPS position
+ * Get current GPS position with high accuracy
  */
 export async function getCurrentPosition() {
     return new Promise((resolve, reject) => {
@@ -16,19 +16,23 @@ export async function getCurrentPosition() {
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                resolve({
+                const pos = {
                     lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                });
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                console.log(`Location lock acquired: ${pos.accuracy}m accuracy`);
+                resolve(pos);
             },
             (error) => {
-                console.warn('Geolocation error:', error);
+                console.warn('Geolocation error:', error.message);
+                // If it's a timeout, maybe try one more time or just fallback
                 resolve(DEFAULT_LOCATION);
             },
             {
                 enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0 // Do not use cached readings
+                timeout: 15000,    // Increased to 15s for better indoor lock
+                maximumAge: 0     // No caching for precise location
             }
         );
     });
@@ -45,9 +49,10 @@ export function watchPosition(callback) {
 
     const watchId = navigator.geolocation.watchPosition(
         (position) => {
-            // RELAXED FILTER: 500 meters is better for initial testing
-            if (position.coords.accuracy > 500) {
-                console.log(`Skipping very low accuracy reading: ${position.coords.accuracy}m`);
+            // HIGH ACCURACY FILTER: 100 meters is much better for real use cases
+            // 500m was way too loose and allowed "jumping" to nearby streets
+            if (position.coords.accuracy > 100) {
+                console.log(`Filtering low accuracy reading: ${Math.round(position.coords.accuracy)}m`);
                 return;
             }
 
@@ -55,17 +60,17 @@ export function watchPosition(callback) {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
                 accuracy: position.coords.accuracy,
-                speed: position.coords.speed, // Useful for moving vehicles
+                speed: position.coords.speed,
                 heading: position.coords.heading
             });
         },
         (error) => {
-            console.warn('Watch position error:', error);
+            console.warn('Watch position error:', error.message);
         },
         {
-            enableHighAccuracy: true, // Force GPS
-            timeout: 10000,           // Wait up to 10s for a good reading
-            maximumAge: 0             // Do not use cached readings
+            enableHighAccuracy: true,
+            timeout: 20000,           // Longer timeout for continuous tracking
+            maximumAge: 0
         }
     );
 
