@@ -129,8 +129,8 @@ export function removeMarker(id) {
  */
 export function addDriverMarker(driverId, lat, lng, driverName = 'Driver') {
     const icon = `
-        <div style="background: #10b981; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-            <i class='bx bxs-car' style="color: white; font-size: 20px;"></i>
+        <div style="background: #10b981; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3); transform: translateY(-5px);">
+            <i class='bx bxs-car' style="color: white; font-size: 22px;"></i>
         </div>
     `;
 
@@ -146,8 +146,8 @@ export function addDriverMarker(driverId, lat, lng, driverName = 'Driver') {
  */
 export function addPassengerMarker(passengerId, lat, lng, passengerName = 'Passenger') {
     const icon = `
-        <div style="background: #3b82f6; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-            <i class='bx bxs-user' style="color: white; font-size: 20px;"></i>
+        <div style="background: #4f46e5; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); transform: translateY(-5px);">
+            <i class='bx bxs-user' style="color: white; font-size: 22px;"></i>
         </div>
     `;
 
@@ -163,8 +163,8 @@ export function addPassengerMarker(passengerId, lat, lng, passengerName = 'Passe
  */
 export function addDestinationMarker(lat, lng, address = 'Destination') {
     const icon = `
-        <div style="background: #ef4444; width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-            <i class='bx bxs-flag-alt' style="color: white; font-size: 20px; transform: rotate(45deg);"></i>
+        <div style="background: #ef4444; width: 44px; height: 44px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg) translateY(-8px); display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3);">
+            <i class='bx bxs-flag-alt' style="color: white; font-size: 22px; transform: rotate(45deg);"></i>
         </div>
     `;
 
@@ -218,11 +218,10 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         fitSelectedRoutes: true,
         showAlternatives: false,
         lineOptions: {
-            styles: [{
-                color: options.color || '#3b82f6',
-                opacity: 0.8,
-                weight: 5
-            }]
+            styles: [
+                { color: '#1e1b4b', opacity: 0.1, weight: 10 }, // Outer glow
+                { color: options.color || '#4f46e5', opacity: 1, weight: 6 } // Main line
+            ]
         },
         createMarker: function () { return null; }, // Don't create default markers
         router: L.Routing.osrmv1({
@@ -267,11 +266,10 @@ export function drawMultiPointRoute(points, options = {}) {
         fitSelectedRoutes: true,
         showAlternatives: false,
         lineOptions: {
-            styles: [{
-                color: options.color || '#10b981',
-                opacity: 0.8,
-                weight: 5
-            }]
+            styles: [
+                { color: '#064e3b', opacity: 0.1, weight: 10 },
+                { color: options.color || '#10b981', opacity: 1, weight: 6 }
+            ]
         },
         createMarker: function () { return null; },
         router: L.Routing.osrmv1({

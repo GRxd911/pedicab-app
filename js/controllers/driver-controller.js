@@ -671,5 +671,63 @@ showActiveRideUI = function (ride) {
 // Start map on init
 setTimeout(initDriverMap, 2000);
 
+// --- EXPLORATION MAP & TABS ---
+window.switchTab = (tab) => {
+    const homeView = document.getElementById('view-home');
+    const mapView = document.getElementById('view-map');
+    const navHome = document.getElementById('nav-home');
+    const navMap = document.getElementById('nav-map');
+
+    if (tab === 'home') {
+        homeView.classList.add('active');
+        mapView.classList.remove('active');
+        navHome.classList.add('active');
+        navMap.classList.remove('active');
+
+        // Always ensure the home map is updated
+        checkContextAndLoad();
+    } else if (tab === 'map') {
+        homeView.classList.remove('active');
+        mapView.classList.add('active');
+        navHome.classList.remove('active');
+        navMap.classList.add('active');
+
+        // Initialize larger map
+        setTimeout(initExplorationMap, 100);
+    }
+};
+
+async function initExplorationMap() {
+    // Current or default location
+    const lat = currentDriverLat || 9.3068;
+    const lng = currentDriverLng || 123.3033;
+
+    // initMap handles container replacement
+    driverMap = initMap('exploration-map', { lat, lng }, 14);
+
+    clearAllMarkers();
+    clearRoute();
+
+    // Add current driver
+    const userIcon = `<div class="user-location-marker"></div>`;
+    addMarker(`driver-${currentUser.id}`, lat, lng, {
+        icon: userIcon,
+        title: "You",
+        popup: "Your Current Position"
+    });
+
+    // Optionally show nearby requests pins
+    try {
+        const pendingRides = await RideService.fetchPendingRides(currentUser.id);
+        pendingRides.forEach(ride => {
+            if (ride.pickup_lat && ride.pickup_lng) {
+                addPassengerMarker(`req-${ride.ride_id}`, ride.pickup_lat, ride.pickup_lng, `Request from ${ride.passenger?.fullname || 'User'}`);
+            }
+        });
+    } catch (e) {
+        console.warn("Could not load nearby requests for exploration map");
+    }
+}
+
 // START
 init();
