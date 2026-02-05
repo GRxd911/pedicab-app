@@ -798,35 +798,53 @@ async function autoLocateUser() {
     try {
         elements.pickupInput.placeholder = "🔍 Finding your precise location...";
 
-        // This now waits up to 7s for a high-accuracy GPS lock
+        // This now waits up to 10s for a high-accuracy GPS lock
         const pos = await getCurrentPosition();
 
-        if (pos) {
-            currentPassengerLat = pos.lat;
-            currentPassengerLng = pos.lng;
+        if (!pos) {
+            console.warn("GPS failed or denied.");
+            elements.pickupInput.placeholder = "📍 Enable GPS & Tap to Locate";
+            showCityAlert("⚠️ Location access denied or unavailable. Please enable GPS for accurate pickup.");
 
-            // Update map marker instantly to where the GPS says (regardless of address)
-            if (passengerMap) {
-                const userIcon = `<div class="user-location-marker"></div>`;
-                addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
-                    icon: userIcon,
-                    title: "You",
-                    popup: `Current Accuracy: ${Math.round(pos.accuracy || 0)}m`
-                });
-                centerMap(pos.lat, pos.lng, 17); // Zoom in closer
-            }
-
-            const address = await reverseGeocode(pos.lat, pos.lng);
-
-            if (address) {
-                elements.pickupInput.value = address;
-                elements.pickupInput.style.border = "2px solid #10b981";
-                elements.pickupInput.style.background = "#f0fdf4";
-            }
+            // Add a clickable handler to retry
+            elements.pickupInput.onclick = () => {
+                elements.pickupInput.onclick = null; // Remove handler
+                autoLocateUser();
+            };
+            return;
         }
+
+        // Check accuracy - warn if it's too loose (e.g. > 100 meters)
+        if (pos.accuracy && pos.accuracy > 100) {
+            showCityAlert(`⚠️ Weak GPS signal (Accuracy: ${Math.round(pos.accuracy)}m). Please verify your pin on the map.`);
+        }
+
+        currentPassengerLat = pos.lat;
+        currentPassengerLng = pos.lng;
+
+        // Update map marker instantly to where the GPS says
+        if (passengerMap) {
+            const userIcon = `<div class="user-location-marker"></div>`;
+            addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
+                icon: userIcon,
+                title: "You",
+                popup: `Location Accuracy: ${Math.round(pos.accuracy || 0)}m`
+            });
+            centerMap(pos.lat, pos.lng, 18); // Zoom in close directly
+        }
+
+        const address = await reverseGeocode(pos.lat, pos.lng);
+
+        if (address) {
+            elements.pickupInput.value = address;
+            elements.pickupInput.style.border = "2px solid #10b981";
+            elements.pickupInput.style.background = "#f0fdf4";
+        }
+
     } catch (e) {
         console.error("Auto-locate failed:", e);
         elements.pickupInput.placeholder = "Enter Pick-up Location";
+        showCityAlert("Could not determine location. Please enter manually.");
     }
 }
 

@@ -11,7 +11,8 @@ const DEFAULT_LOCATION = { lat: 9.3068, lng: 123.3033 };
 export async function getCurrentPosition() {
     return new Promise((resolve) => {
         if (!navigator.geolocation) {
-            resolve(DEFAULT_LOCATION);
+            console.warn('Geolocation not supported');
+            resolve(null);
             return;
         }
 
@@ -21,46 +22,48 @@ export async function getCurrentPosition() {
         const watchId = navigator.geolocation.watchPosition(
             (position) => {
                 const { latitude, longitude, accuracy } = position.coords;
-                console.log(`GPS Reading: ${accuracy.toFixed(1)}m accuracy`);
+                // console.log(`GPS Reading: ${accuracy.toFixed(1)}m accuracy`);
 
                 // Store the best reading we've seen so far
                 if (!bestReading || accuracy < bestReading.accuracy) {
                     bestReading = { lat: latitude, lng: longitude, accuracy };
                 }
 
-                // If we get a very good reading (under 40 meters), resolve immediately
-                if (accuracy <= 40 && !hasResolved) {
+                // If we get a very good reading (under 30 meters), resolve immediately
+                if (accuracy <= 30 && !hasResolved) {
                     hasResolved = true;
                     navigator.geolocation.clearWatch(watchId);
-                    console.log("✅ High accuracy lock acquired!");
+                    // console.log("✅ High accuracy lock acquired!");
                     resolve(bestReading);
                 }
             },
             (error) => {
                 console.warn('GPS Wait Error:', error.message);
-                if (!hasResolved) {
-                    hasResolved = true;
-                    navigator.geolocation.clearWatch(watchId);
-                    resolve(bestReading || DEFAULT_LOCATION);
-                }
+                // Don't resolve immediately on error, wait for timeout in case it's a transient error
+                // or if the user is clicking "Allow"
             },
             {
                 enableHighAccuracy: true,
                 maximumAge: 0,
-                timeout: 10000 // Total wait time for a "good" lock
+                timeout: 15000 // Wait up to 15s for the user to enable GPS/Allow permission
             }
         );
 
-        // Safety timeout: If we haven't found a "perfect" lock in 7 seconds, 
-        // take whatever the best reading we found was.
+        // Timeout handler
         setTimeout(() => {
             if (!hasResolved) {
                 hasResolved = true;
                 navigator.geolocation.clearWatch(watchId);
-                console.log("⏱️ GPS lock timed out, using best available reading:", bestReading ? `${bestReading.accuracy}m` : 'None');
-                resolve(bestReading || DEFAULT_LOCATION);
+
+                if (bestReading) {
+                    console.log("⏱️ GPS timeout, using best reading:", bestReading.accuracy + "m");
+                    resolve(bestReading);
+                } else {
+                    console.warn("❌ GPS failed to get any reading.");
+                    resolve(null); // Return null to indicate failure
+                }
             }
-        }, 7000);
+        }, 10000); // 10 second strict timeout
     });
 }
 
