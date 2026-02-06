@@ -116,11 +116,11 @@ async function init() {
             document.addEventListener(evt, initAudio, { once: true });
         });
 
-        // Start checking context
-        checkContextAndLoad();
+        // Initialize Map
+        await initDriverMap();
 
-        // Initialize Map with a delay to ensure container visibility
-        setTimeout(initDriverMap, 1500);
+        // Load active context (this draws markers/routes AFTER map is ready)
+        await checkContextAndLoad();
 
     } catch (err) {
         console.error('CRITICAL INIT ERROR:', err);
