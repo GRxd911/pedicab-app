@@ -18,6 +18,7 @@ export function initMap(containerId, center = { lat: 10.3157, lng: 123.8854 }, z
     // Remove existing map if any
     if (map) {
         map.remove();
+        markers = {}; // Clear stale marker references to prevent "layer not found" errors on new map
     }
 
     // Create map

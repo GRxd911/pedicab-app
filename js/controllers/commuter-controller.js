@@ -994,44 +994,45 @@ window.switchTab = (tab) => {
 };
 
 async function initExplorationMap() {
-    // Ensure we have a location
-    if (!currentPassengerLat || !currentPassengerLng) {
-        console.log("Exploration map: Fetching fresh location...");
-        const pos = await getCurrentPosition();
+    const defaultLat = 9.3068;
+    const defaultLng = 123.3033;
+
+    // Use last known if available, else default
+    let lat = currentPassengerLat || defaultLat;
+    let lng = currentPassengerLng || defaultLng;
+
+    // 1. Init Map Instantly
+    passengerMap = initMap('exploration-map', { lat, lng }, 16);
+    // Note: markers are cleared inside initMap now, so we start fresh
+
+    // 2. Add "You" Marker Immediately (even if using default)
+    const addYouMarker = (l, ln, acc = null) => {
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`passenger-${currentUser.id}`, l, ln, {
+            icon: userIcon,
+            title: "You",
+            popup: acc ? `Accuracy: ${Math.round(acc)}m` : "Approximate Location"
+        });
+    };
+    addYouMarker(lat, lng);
+
+    // 3. Fetch Fresh GPS in Background
+    getCurrentPosition().then(pos => {
         if (pos) {
             currentPassengerLat = pos.lat;
             currentPassengerLng = pos.lng;
-        } else {
-            console.warn("Exploration map: Could not get GPS. Using default.");
+            addYouMarker(pos.lat, pos.lng, pos.accuracy);
+            // Optional: Pan to user if they haven't moved map too much? 
+            // For now, let's center them to be helpful
+            centerMap(pos.lat, pos.lng);
         }
-    }
+    }).catch(console.warn);
 
-    const lat = currentPassengerLat || 9.3068;
-    const lng = currentPassengerLng || 123.3033;
-
-    // Initialize map in the new container
-    passengerMap = initMap('exploration-map', { lat, lng }, 16);
-
-    // Clear any existing markers (like old route markers)
-    clearAllMarkers();
-    clearRoute();
-
-    // Add User Marker
-    if (currentPassengerLat && currentPassengerLng) {
-        const userIcon = `<div class="user-location-marker"></div>`;
-        addMarker(`passenger-${currentUser.id}`, currentPassengerLat, currentPassengerLng, {
-            icon: userIcon,
-            title: "You",
-            popup: "Your Current Location"
-        });
-    }
-
-    // Fetch and show drivers
+    // 4. Fetch Drivers
     try {
         const drivers = await CommuterRides.fetchAvailableDrivers();
         drivers.forEach(d => {
             if (d.current_lat && d.current_lng) {
-                // Use the utility to add markers
                 const dUser = Array.isArray(d.users) ? d.users[0] : d.users;
                 addDriverMarker(d.driver_id, d.current_lat, d.current_lng, dUser?.fullname || 'Driver');
             }
