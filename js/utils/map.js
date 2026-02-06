@@ -236,13 +236,14 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         L.latLng(endLat, endLng)
     ];
 
-    if (routeControl && map.hasLayer(routeControl)) {
+    // Check if control already exists - update it instead of creating new one
+    if (routeControl) {
         console.log("♻️ Updating existing route waypoints...");
         routeControl.setWaypoints(waypoints);
         return routeControl;
     }
 
-    // Create new routing control if it doesn't exist or was removed
+    // Create new routing control
     routeControl = L.Routing.control({
         waypoints: waypoints,
         routeWhileDragging: false,
@@ -251,6 +252,7 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         fitSelectedRoutes: false,
         showAlternatives: false,
         show: false,
+        containerClassName: 'hidden', // Extra safety to hide UI
         lineOptions: {
             styles: [
                 { color: '#1e1b4b', opacity: 0.1, weight: 12 },
@@ -286,7 +288,7 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
 export function drawMultiPointRoute(points, options = {}) {
     const waypoints = points.map(p => L.latLng(p.lat, p.lng));
 
-    if (routeControl && map.hasLayer(routeControl)) {
+    if (routeControl) {
         routeControl.setWaypoints(waypoints);
         return routeControl;
     }
@@ -299,6 +301,7 @@ export function drawMultiPointRoute(points, options = {}) {
         fitSelectedRoutes: false,
         showAlternatives: false,
         show: false,
+        containerClassName: 'hidden',
         lineOptions: {
             styles: [
                 { color: '#064e3b', opacity: 0.1, weight: 12 },
