@@ -902,7 +902,11 @@ let currentPassengerLng = null;
 // Initialize Map
 // Initialize Map
 async function initPassengerMap() {
-    if (passengerMap) return passengerMap;
+    // FORCE reset to ensure we are targeting the 'passenger-map' container
+    // Do NOT return early if passengerMap exists, because it might be pointing to 'exploration-map'
+
+    // Check if we need to destroy the old map instance explicitly (though initMap does this)
+    // passengerMap = null; 
 
     const defaultLat = 9.3068;
     const defaultLng = 123.3033;
