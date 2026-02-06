@@ -177,7 +177,8 @@ async function checkActiveRide(forceShowCompleted = false) {
             stopTrackingDriver(); // No driver yet
 
             // Still show the map with pickup/dropoff
-            if (mapContainer) mapContainer.style.display = 'block';
+            const mContainer = document.getElementById('tracking-map-container');
+            if (mContainer) mContainer.style.display = 'block';
             await initPassengerMap();
             setupRideMap(ride);
         } else {
@@ -240,8 +241,12 @@ async function startTrackingDriver(driverId, ride) {
 }
 
 async function setupRideMap(ride) {
-    if (!passengerMap) return;
+    if (!passengerMap) {
+        console.warn("setupRideMap: Map not ready yet");
+        return;
+    }
 
+    console.log("📍 Syncing Ride Map Markers...");
     clearAllMarkers();
     clearRoute();
 
@@ -255,7 +260,16 @@ async function setupRideMap(ride) {
         addDestinationMarker(ride.dropoff_lat, ride.dropoff_lng, ride.dropoff_location);
     }
 
-    // 3. Add User Marker (Live)
+    // 3. Add User Marker (Live Blue Dot)
+    // If we don't have GPS yet, try to get it, or use pickup as fallback for now
+    if (!currentPassengerLat || !currentPassengerLng) {
+        const pos = await getCurrentPosition(); // Try a quick fetch 
+        if (pos) {
+            currentPassengerLat = pos.lat;
+            currentPassengerLng = pos.lng;
+        }
+    }
+
     if (currentPassengerLat && currentPassengerLng) {
         const userIcon = `<div class="user-location-marker"></div>`;
         addMarker(`passenger-${currentUser.id}`, currentPassengerLat, currentPassengerLng, {
@@ -267,15 +281,22 @@ async function setupRideMap(ride) {
 
     // 4. If driver exists, add them
     if (ride.driver_id) {
-        const { data: driverData } = await supabaseClient
-            .from('drivers')
-            .select('*, users(fullname)')
-            .eq('driver_id', ride.driver_id)
-            .single();
+        try {
+            const { data: driverData, error } = await supabaseClient
+                .from('drivers')
+                .select('*, users(fullname)')
+                .eq('driver_id', ride.driver_id)
+                .single();
 
-        if (driverData && driverData.current_lat && driverData.current_lng) {
-            addDriverMarker(ride.driver_id, driverData.current_lat, driverData.current_lng, driverData.users?.fullname || 'Driver');
-            handleLocationUpdate(driverData);
+            if (driverData && driverData.current_lat && driverData.current_lng) {
+                console.log("🚗 Adding Driver Marker:", driverData.users?.fullname);
+                addDriverMarker(ride.driver_id, driverData.current_lat, driverData.current_lng, driverData.users?.fullname || 'Driver');
+                handleLocationUpdate(driverData);
+            } else {
+                console.warn("Driver location not available in DB");
+            }
+        } catch (e) {
+            console.error("Error fetching driver for map:", e);
         }
     }
 
