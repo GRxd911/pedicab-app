@@ -205,19 +205,34 @@ export async function geocodeAddress(address) {
  * Get address suggestions for autocomplete
  */
 export async function getAddressSuggestions(query) {
-    if (!query || query.length < 3) return [];
+    if (!query || query.length < 2) return [];
 
     try {
+        // Optimize query for buildings and landmarks
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Dumaguete City, Philippines')}&limit=5`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Dumaguete City, Negros Oriental')}&limit=8&addressdetails=1`
         );
         const data = await response.json();
 
-        return data.map(item => ({
-            displayName: item.display_name,
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon)
-        }));
+        return data.map(item => {
+            // Create a friendlier display name (Building name first if available)
+            const addr = item.address;
+            let display = item.display_name;
+
+            if (addr) {
+                const name = addr.university || addr.school || addr.amenity || addr.building || addr.office || addr.shop;
+                if (name) {
+                    const road = addr.road || '';
+                    display = road ? `${name}, ${road}` : name;
+                }
+            }
+
+            return {
+                displayName: display,
+                lat: parseFloat(item.lat),
+                lng: parseFloat(item.lon)
+            };
+        });
     } catch (error) {
         console.error('Autocomplete error:', error);
         return [];

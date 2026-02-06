@@ -439,37 +439,47 @@
             right: 0;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            max-height: 200px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 2000;
+            max-height: 250px;
             overflow-y: auto;
             display: none;
             border: 1px solid #eef2f6;
+            animation: slideUpFade 0.2s ease-out;
+        }
+
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .suggestion-item {
-            padding: 12px 16px;
+            padding: 14px 16px;
             font-size: 13px;
             color: var(--text-main);
             border-bottom: 1px solid #f8fafc;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 10px;
-        }
-
-        .suggestion-item:last-child {
-            border-bottom: none;
+            gap: 12px;
         }
 
         .suggestion-item:hover {
-            background: #f8fafc;
+            background: #f0f4ff;
+            padding-left: 20px;
         }
 
         .suggestion-item i {
-            color: var(--text-muted);
-            font-size: 16px;
+            font-size: 18px;
+            min-width: 20px;
         }
     </style>
 </head>

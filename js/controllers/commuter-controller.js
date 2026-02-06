@@ -1183,7 +1183,7 @@ function setupAutocomplete(input, container, type) {
         clearTimeout(timeout);
         const query = input.value.trim();
 
-        if (query.length < 3) {
+        if (query.length < 2) {
             container.style.display = 'none';
             return;
         }
@@ -1193,15 +1193,15 @@ function setupAutocomplete(input, container, type) {
             if (suggestions.length > 0) {
                 container.innerHTML = suggestions.map(s => `
                     <div class="suggestion-item" onclick="window.selectSuggestion('${type}', '${s.displayName.replace(/'/g, "\\'")}', ${s.lat}, ${s.lng})">
-                        <i class='bx bxs-map-pin'></i>
-                        <span>${s.displayName}</span>
+                        <i class='bx bxs-institution' style="color: var(--primary);"></i>
+                        <span style="font-weight: 500;">${s.displayName}</span>
                     </div>
                 `).join('');
                 container.style.display = 'block';
             } else {
                 container.style.display = 'none';
             }
-        }, 400); // 400ms debounce
+        }, 300); // Faster 300ms debounce
     });
 
     // Close suggestions when clicking outside
