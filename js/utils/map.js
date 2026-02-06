@@ -143,7 +143,7 @@ export function addPassengerMarker(passengerId, lat, lng, passengerName = 'Passe
 }
 
 /**
- * Add ride request marker for drivers (with Accept button in popup)
+ * Add ride request marker for drivers (with Accept/Decline in popup)
  */
 export function addRideRequestMarker(ride, passengerName = 'Passenger') {
     const icon = `
@@ -156,26 +156,32 @@ export function addRideRequestMarker(ride, passengerName = 'Passenger') {
     const dropoff = (ride.dropoff_location || 'Unknown').replace(/'/g, "\\'");
 
     const popupHtml = `
-        <div style="min-width: 160px; font-family: 'Outfit', sans-serif; padding: 5px;">
-            <div style="margin-bottom: 8px;">
-                <b style="font-size: 14px; color: #1e293b;">${passengerName}</b>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${ride.pickup_location} → ${ride.dropoff_location}</div>
+        <div style="min-width: 200px; font-family: 'Outfit', sans-serif; padding: 10px; text-align: center;">
+            <div style="margin-bottom: 12px;">
+                <b style="font-size: 16px; color: #1e293b; display: block;">${passengerName}</b>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.4;">
+                    <i class='bx bxs-map-pin' style="color: #10b981;"></i> ${ride.pickup_location}<br>
+                    <i class='bx bxs-flag-alt' style="color: #ef4444;"></i> ${ride.dropoff_location}
+                </div>
             </div>
-            <div style="color: #4f46e5; font-weight: 700; font-size: 15px; margin-bottom: 12px;">₱${ride.price}</div>
-            <div style="display: flex; gap: 8px;">
+            <div style="background: #f8fafc; padding: 8px; border-radius: 12px; color: #4f46e5; font-weight: 800; font-size: 18px; margin-bottom: 15px; border: 1px dashed #e2e8f0;">
+                ₱${parseFloat(ride.price).toFixed(2)}
+            </div>
+            <div style="display: flex; gap: 10px;">
                 <button onclick="window.declineRide(${ride.ride_id})" 
-                    style="flex: 1; background: #f1f5f9; color: #64748b; border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12px;">
-                    Skip
+                    style="flex: 1; background: #fee2e2; color: #dc2626; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s;">
+                    Decline
                 </button>
                 <button onclick="window.acceptRide(${ride.ride_id}, '${pickup}', '${dropoff}')" 
-                    style="flex: 1.5; background: #4f46e5; color: white; border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);">
+                    style="flex: 1.5; background: #10b981; color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s;">
                     Accept
                 </button>
             </div>
         </div>
     `;
 
-    return addMarker(`passenger-${ride.ride_id}`, ride.pickup_lat, ride.pickup_lng, {
+    // Use passenger_id for the ID to ensure it overwrites standard passenger markers
+    return addMarker(`passenger-${ride.passenger_id || ride.ride_id}`, ride.pickup_lat, ride.pickup_lng, {
         icon: icon,
         title: passengerName,
         popup: popupHtml
