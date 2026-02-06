@@ -902,11 +902,9 @@ let currentPassengerLng = null;
 // Initialize Map
 // Initialize Map
 async function initPassengerMap() {
-    // FORCE reset to ensure we are targeting the 'passenger-map' container
-    // Do NOT return early if passengerMap exists, because it might be pointing to 'exploration-map'
-
-    // Check if we need to destroy the old map instance explicitly (though initMap does this)
-    // passengerMap = null; 
+    // Prevent re-initializing the map if it's already active (fixes 5s refresh flicker)
+    // switchTab() handles clearing this when changing views
+    if (passengerMap) return passengerMap;
 
     const defaultLat = 9.3068;
     const defaultLng = 123.3033;
@@ -970,6 +968,11 @@ window.switchTab = (tab) => {
     [navHome, navMap, navHistory, navProfile].forEach(el => {
         if (el) el.classList.remove('active');
     });
+
+    // Reset active map ref to force re-init on new tab
+    if (tab === 'home' || tab === 'map') {
+        passengerMap = null;
+    }
 
     if (tab === 'home' && homeView) {
         homeView.style.display = 'block';
