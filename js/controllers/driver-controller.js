@@ -302,29 +302,45 @@ function updateActiveTime() {
 
 // --- MAP INTEGRATION ---
 
-function initDriverMap() {
-    if (driverMap) return;
+async function initDriverMap() {
+    // Reset to ensure we always target the correct container
+    if (driverMap) return driverMap;
+
     const container = document.getElementById('driver-map');
     if (!container) return;
 
-    getCurrentPosition().then(pos => {
-        currentDriverLat = pos.lat;
-        currentDriverLng = pos.lng;
+    console.log('📍 Initializing Driver Home Map...');
 
-        driverMap = initMap('driver-map', { lat: pos.lat, lng: pos.lng }, 15);
+    const defaultLat = 9.3068;
+    const defaultLng = 123.3033;
+    let startLat = currentDriverLat || defaultLat;
+    let startLng = currentDriverLng || defaultLng;
 
-        // Add pulsating self marker
-        const userIcon = `<div class="user-location-marker"></div>`;
-        addMarker(`driver-${currentUser.id}`, pos.lat, pos.lng, {
-            icon: userIcon,
-            title: "You",
-            popup: "Your Current Position"
-        });
+    // Init map IMMEDIATELY for speed
+    driverMap = initMap('driver-map', { lat: startLat, lng: startLng }, 15);
 
-        startTrackingLocation();
-    }).catch(err => {
-        console.warn('Map initialization failed (Location denied?):', err);
+    // Add immediate self marker
+    const userIcon = `<div class="user-location-marker"></div>`;
+    addMarker(`driver-${currentUser.id}`, startLat, startLng, {
+        icon: userIcon,
+        title: "You",
+        popup: "Your Current Position"
     });
+
+    // Start background tracking if not already
+    startTrackingLocation();
+
+    // Refine location immediately
+    getCurrentPosition().then(pos => {
+        if (pos) {
+            currentDriverLat = pos.lat;
+            currentDriverLng = pos.lng;
+            updateMarkerPosition(`driver-${currentUser.id}`, pos.lat, pos.lng);
+            centerMap(pos.lat, pos.lng);
+        }
+    }).catch(err => console.warn('Fast init GPS error:', err));
+
+    return driverMap;
 }
 
 function startTrackingLocation() {
@@ -586,11 +602,17 @@ window.switchTab = (tab) => {
         if (el) el.classList.remove('active');
     });
 
+    // Reset active map ref to force re-init on new tab container
+    if (tab === 'home' || tab === 'map') {
+        driverMap = null;
+    }
+
     if (tab === 'home' && homeView) {
         if (mapView) mapView.classList.remove('active');
         homeView.classList.add('active');
         if (navHome) navHome.classList.add('active');
         checkContextAndLoad();
+        initDriverMap(); // Re-init home map
     } else if (tab === 'map' && mapView) {
         if (homeView) homeView.classList.remove('active');
         mapView.classList.add('active');
@@ -607,12 +629,14 @@ window.switchTab = (tab) => {
 };
 
 async function initExplorationMap() {
+    console.log('📍 Initializing Driver Exploration Map...');
     const lat = currentDriverLat || 9.3068;
     const lng = currentDriverLng || 123.3033;
 
+    // 1. Init Map Instantly
     driverMap = initMap('exploration-map', { lat, lng }, 14);
-    clearAllMarkers();
 
+    // 2. Add immediate self marker
     const userIcon = `<div class="user-location-marker"></div>`;
     addMarker(`driver-${currentUser.id}`, lat, lng, {
         icon: userIcon,
@@ -620,12 +644,25 @@ async function initExplorationMap() {
         popup: "Your Position"
     });
 
+    // 3. Refine GPS in background
+    getCurrentPosition().then(pos => {
+        if (pos) {
+            currentDriverLat = pos.lat;
+            currentDriverLng = pos.lng;
+            updateMarkerPosition(`driver-${currentUser.id}`, pos.lat, pos.lng);
+            centerMap(pos.lat, pos.lng);
+        }
+    }).catch(console.warn);
+
+    // 4. Fetch Requests
     try {
         const rides = await RideService.fetchPendingRides(currentUser.id);
         rides.forEach(r => {
             if (r.pickup_lat) addPassengerMarker(r.ride_id, r.pickup_lat, r.pickup_lng, 'Request');
         });
-    } catch (e) { }
+    } catch (e) {
+        console.error('Error fetching ride markers:', e);
+    }
 }
 
 function setupStatusListener() {
