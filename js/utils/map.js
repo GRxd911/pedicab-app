@@ -245,7 +245,7 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         routeWhileDragging: false,
         addWaypoints: false,
         draggableWaypoints: false,
-        fitSelectedRoutes: true,
+        fitSelectedRoutes: false,
         showAlternatives: false,
         show: false, // Hide the itinerary instructions panel
         lineOptions: {
@@ -294,7 +294,7 @@ export function drawMultiPointRoute(points, options = {}) {
         routeWhileDragging: false,
         addWaypoints: false,
         draggableWaypoints: false,
-        fitSelectedRoutes: true,
+        fitSelectedRoutes: false,
         showAlternatives: false,
         show: false, // Hide the itinerary instructions panel
         lineOptions: {
@@ -335,16 +335,34 @@ export function clearRoute() {
 }
 
 /**
- * Fit map to show all markers
+ * Fit map to show all markers (Smartly)
  */
 export function fitBounds() {
     if (!map) return;
     const markerArray = Object.values(markers);
+    if (markerArray.length === 0) return;
+
     if (markerArray.length === 1) {
-        map.setView(markerArray[0].getLatLng(), 16);
-    } else if (markerArray.length > 1) {
+        // Only re-center if marker is NOT in view
+        if (!map.getBounds().contains(markerArray[0].getLatLng())) {
+            map.setView(markerArray[0].getLatLng(), 16, { animate: true });
+        }
+    } else {
         const group = L.featureGroup(markerArray);
-        map.fitBounds(group.getBounds().pad(0.2), { maxZoom: 16 });
+        const bounds = group.getBounds();
+
+        // Only fit bounds if markers are moving outside the current view
+        // OR if the current view is way too zoomed in/out
+        const currentBounds = map.getBounds();
+        const padding = 0.3;
+
+        if (!currentBounds.contains(bounds.pad(0.1))) {
+            map.fitBounds(bounds.pad(padding), {
+                maxZoom: 16,
+                animate: true,
+                duration: 0.8
+            });
+        }
     }
 }
 

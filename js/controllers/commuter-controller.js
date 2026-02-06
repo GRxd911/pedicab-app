@@ -405,10 +405,8 @@ async function handleLocationUpdate(driverData) {
         }
     }
 
-    // 3. SMART VIEWPORT (Only fit bounds once in a while or if markers move out of view)
-    if (timeSinceLastRoute > 5000) {
-        fitBounds();
-    }
+    // 3. SMART VIEWPORT (Only fits if markers go off-screen)
+    fitBounds();
 }
 
 /**
