@@ -177,9 +177,8 @@ async function checkActiveRide(forceShowCompleted = false) {
             stopTrackingDriver(); // No driver yet
 
             // Still show the map with pickup/dropoff
-            const mapContainer = document.getElementById('tracking-map-container');
             if (mapContainer) mapContainer.style.display = 'block';
-            initPassengerMap();
+            await initPassengerMap();
             setupRideMap(ride);
         } else {
             const driverDetails = await CommuterRides.fetchDriverDetails(ride.driver_id);
@@ -195,8 +194,7 @@ async function checkActiveRide(forceShowCompleted = false) {
 }
 
 // Start tracking driver during active ride
-// Start tracking driver during active ride
-function startTrackingDriver(driverId, ride) {
+async function startTrackingDriver(driverId, ride) {
     console.log('🚀 Starting Real-time tracking for driver:', driverId);
 
     // Show map container
@@ -204,7 +202,7 @@ function startTrackingDriver(driverId, ride) {
     if (mapContainer) mapContainer.style.display = 'block';
 
     // Init map if needed
-    initPassengerMap();
+    await initPassengerMap();
 
     // Initial map setup
     setupRideMap(ride);
@@ -901,24 +899,41 @@ let currentPassengerLat = null;
 let currentPassengerLng = null;
 
 // Initialize Map
-function initPassengerMap() {
-    if (passengerMap) return;
+// Initialize Map
+async function initPassengerMap() {
+    if (passengerMap) return passengerMap;
 
-    // Get current location
-    getCurrentPosition().then(pos => {
-        currentPassengerLat = pos.lat;
-        currentPassengerLng = pos.lng;
+    try {
+        // Get current location with timeout protection from the service
+        let pos = await getCurrentPosition();
+
+        // Fallback if no GPS
+        if (!pos) {
+            console.warn("InitMap: No GPS, using default center.");
+            pos = { lat: 9.3068, lng: 123.3033 };
+        } else {
+            currentPassengerLat = pos.lat;
+            currentPassengerLng = pos.lng;
+        }
 
         passengerMap = initMap('passenger-map', { lat: pos.lat, lng: pos.lng });
 
-        // Add pulsating user marker
-        const userIcon = `<div class="user-location-marker"></div>`;
-        addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
-            icon: userIcon,
-            title: "You",
-            popup: "Your Current Location"
-        });
-    });
+        // Add pulsating user marker only if we have real GPS
+        if (currentPassengerLat && currentPassengerLng) {
+            const userIcon = `<div class="user-location-marker"></div>`;
+            addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
+                icon: userIcon,
+                title: "You",
+                popup: "Your Current Location"
+            });
+        }
+        return passengerMap;
+    } catch (e) {
+        console.error("Map Init Error:", e);
+        // Try one last time with default to avoid blank screen
+        passengerMap = initMap('passenger-map', { lat: 9.3068, lng: 123.3033 });
+        return passengerMap;
+    }
 }
 
 // --- EXPLORATION MAP & TABS ---
