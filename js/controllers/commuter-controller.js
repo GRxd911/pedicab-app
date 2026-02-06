@@ -45,6 +45,7 @@ let manualPickupAddress = null;
 let lastRouteCalcTime = 0;
 let lastDriverPos = null;
 let currentTrackingRideId = null;
+let isCheckingRide = false;
 
 // DOM Elements
 const elements = {
@@ -181,7 +182,8 @@ function setupListeners() {
 // --- RIDE MANAGEMENT ---
 
 async function checkActiveRide(forceShowCompleted = false) {
-    if (!currentUser) return;
+    if (!currentUser || isCheckingRide) return;
+    isCheckingRide = true;
 
     try {
         const ride = await CommuterRides.fetchActiveRide(currentUser.id);
@@ -230,6 +232,8 @@ async function checkActiveRide(forceShowCompleted = false) {
 
     } catch (err) {
         console.error('Error in checkActiveRide:', err);
+    } finally {
+        isCheckingRide = false;
     }
 }
 
@@ -354,11 +358,14 @@ async function setupRideMap(ride) {
     }
 }
 
+let isUpdatingLocation = false;
 async function handleLocationUpdate(driverData) {
-    if (!driverData.current_lat || !driverData.current_lng) return;
+    if (!driverData.current_lat || !driverData.current_lng || isUpdatingLocation) return;
+    isUpdatingLocation = true;
 
-    // 1. Update driver marker smoothly (upsert)
-    const driverIcon = `
+    try {
+        // 1. Update driver marker smoothly (upsert)
+        const driverIcon = `
         <div class="driver-marker-premium">
             <div class="marker-halo"></div>
             <div class="marker-core">
@@ -366,54 +373,57 @@ async function handleLocationUpdate(driverData) {
             </div>
         </div>
     `;
-    updateMarkerPosition(`driver-${driverData.driver_id}`, driverData.current_lat, driverData.current_lng, driverIcon);
+        updateMarkerPosition(`driver-${driverData.driver_id}`, driverData.current_lat, driverData.current_lng, driverIcon);
 
-    // 2. LIVE ROUTE DRAWING (Throttled to prevent "tweaking"/flickering)
-    const now = Date.now();
-    const timeSinceLastRoute = now - lastRouteCalcTime;
+        // 2. LIVE ROUTE DRAWING (Throttled to prevent "tweaking"/flickering)
+        const now = Date.now();
+        const timeSinceLastRoute = now - lastRouteCalcTime;
 
-    // Calculate how far driver moved since last route update
-    let distMoved = 1000; // Default to large if no last pos
-    if (lastDriverPos) {
-        distMoved = calculateDistance(
-            lastDriverPos.lat, lastDriverPos.lng,
-            driverData.current_lat, driverData.current_lng
-        ) * 1000; // convert to meters
-    }
+        // Calculate how far driver moved since last route update
+        let distMoved = 1000; // Default to large if no last pos
+        if (lastDriverPos) {
+            distMoved = calculateDistance(
+                lastDriverPos.lat, lastDriverPos.lng,
+                driverData.current_lat, driverData.current_lng
+            ) * 1000; // convert to meters
+        }
 
-    // Only redraw route if:
-    // a) It's been more than 15 seconds
-    // b) Driver moved more than 50 meters
-    // c) It's the first time
-    if (timeSinceLastRoute > 15000 || distMoved > 50 || lastRouteCalcTime === 0) {
-        console.log(`🗺️ Redrawing route. Moved: ${distMoved.toFixed(0)}m, Time: ${Math.round(timeSinceLastRoute / 1000)}s`);
+        // Only redraw route if:
+        // a) It's been more than 15 seconds
+        // b) Driver moved more than 50 meters
+        // c) It's the first time
+        if (timeSinceLastRoute > 15000 || distMoved > 50 || lastRouteCalcTime === 0) {
+            console.log(`🗺️ Redrawing route. Moved: ${distMoved.toFixed(0)}m, Time: ${Math.round(timeSinceLastRoute / 1000)}s`);
 
-        const ride = await CommuterRides.fetchActiveRide(currentUser.id);
-        if (ride) {
-            const targetLat = ride.status === 'accepted' ? ride.pickup_lat : ride.dropoff_lat;
-            const targetLng = ride.status === 'accepted' ? ride.pickup_lng : ride.dropoff_lng;
+            const ride = await CommuterRides.fetchActiveRide(currentUser.id);
+            if (ride) {
+                const targetLat = ride.status === 'accepted' ? ride.pickup_lat : ride.dropoff_lat;
+                const targetLng = ride.status === 'accepted' ? ride.pickup_lng : ride.dropoff_lng;
 
-            if (targetLat && targetLng) {
-                drawRoute(driverData.current_lat, driverData.current_lng, targetLat, targetLng, {
-                    color: ride.status === 'accepted' ? '#10b981' : '#4f46e5',
-                    onRouteFound: (stats) => {
-                        updateTrackingStats(stats.distance, stats.duration);
-                    }
-                });
-                lastRouteCalcTime = now;
-                lastDriverPos = { lat: driverData.current_lat, lng: driverData.current_lng };
+                if (targetLat && targetLng) {
+                    drawRoute(driverData.current_lat, driverData.current_lng, targetLat, targetLng, {
+                        color: ride.status === 'accepted' ? '#10b981' : '#4f46e5',
+                        onRouteFound: (stats) => {
+                            updateTrackingStats(stats.distance, stats.duration);
+                        }
+                    });
+                    lastRouteCalcTime = now;
+                    lastDriverPos = { lat: driverData.current_lat, lng: driverData.current_lng };
+                }
+            }
+        } else {
+            // Just update basic distance stats (straight line approx) but don't redraw the line
+            // to prevent the map from "tweaking"
+            if (lastDriverPos) {
+                // Optional: minimal UI update here if desired
             }
         }
-    } else {
-        // Just update basic distance stats (straight line approx) but don't redraw the line
-        // to prevent the map from "tweaking"
-        if (lastDriverPos) {
-            // Optional: minimal UI update here if desired
-        }
-    }
 
-    // 3. SMART VIEWPORT (Only fits if markers go off-screen)
-    fitBounds();
+        // 3. SMART VIEWPORT (Only fits if markers go off-screen)
+        fitBounds();
+    } finally {
+        isUpdatingLocation = false;
+    }
 }
 
 /**

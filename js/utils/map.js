@@ -239,9 +239,14 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
 
     // Check if control already exists - update it instead of creating new one
     if (routeControl) {
-        console.log("♻️ Updating existing route waypoints...");
-        routeControl.setWaypoints(waypoints);
-        return routeControl;
+        try {
+            console.log("♻️ Updating existing route waypoints...");
+            routeControl.setWaypoints(waypoints);
+            return routeControl;
+        } catch (e) {
+            console.warn("⚠️ Route update failed, will recreate:", e);
+            clearRoute();
+        }
     }
 
     // Create new routing control
@@ -294,8 +299,13 @@ export function drawMultiPointRoute(points, options = {}) {
     const waypoints = points.map(p => L.latLng(p.lat, p.lng));
 
     if (routeControl) {
-        routeControl.setWaypoints(waypoints);
-        return routeControl;
+        try {
+            routeControl.setWaypoints(waypoints);
+            return routeControl;
+        } catch (e) {
+            console.warn("⚠️ Multi-route update failed, will recreate:", e);
+            clearRoute();
+        }
     }
 
     routeControl = L.Routing.control({
@@ -341,7 +351,13 @@ export function drawMultiPointRoute(points, options = {}) {
  */
 export function clearRoute() {
     if (routeControl) {
-        map.removeControl(routeControl);
+        try {
+            if (map && map.hasLayer) {
+                map.removeControl(routeControl);
+            }
+        } catch (e) {
+            console.warn("Safe route removal:", e);
+        }
         routeControl = null;
         currentRoute = null;
     }
