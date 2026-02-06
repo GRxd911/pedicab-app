@@ -9,6 +9,7 @@ import {
     addMarker,
     addDriverMarker,
     addPassengerMarker,
+    addRideRequestMarker,
     addDestinationMarker,
     drawRoute,
     drawMultiPointRoute,
@@ -204,9 +205,9 @@ async function renderPendingRides(rides) {
         `;
         container.appendChild(card);
 
-        // Add passenger marker to map if coordinates exist
+        // Add passenger marker with Accept button on popup
         if (ride.pickup_lat && ride.pickup_lng) {
-            addPassengerMarker(ride.ride_id, ride.pickup_lat, ride.pickup_lng, passengerName);
+            addRideRequestMarker(ride, passengerName);
         }
     });
 
@@ -658,7 +659,10 @@ async function initExplorationMap() {
     try {
         const rides = await RideService.fetchPendingRides(currentUser.id);
         rides.forEach(r => {
-            if (r.pickup_lat) addPassengerMarker(r.ride_id, r.pickup_lat, r.pickup_lng, 'Request');
+            if (r.pickup_lat) {
+                const passengerName = r.passenger?.fullname || 'Passenger';
+                addRideRequestMarker(r, passengerName);
+            }
         });
     } catch (e) {
         console.error('Error fetching ride markers:', e);

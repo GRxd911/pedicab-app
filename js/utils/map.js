@@ -143,6 +143,46 @@ export function addPassengerMarker(passengerId, lat, lng, passengerName = 'Passe
 }
 
 /**
+ * Add ride request marker for drivers (with Accept button in popup)
+ */
+export function addRideRequestMarker(ride, passengerName = 'Passenger') {
+    const icon = `
+        <div style="background: #4f46e5; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); transform: translateY(-5px);">
+            <i class='bx bxs-user' style="color: white; font-size: 22px;"></i>
+        </div>
+    `;
+
+    const pickup = (ride.pickup_location || 'Unknown').replace(/'/g, "\\'");
+    const dropoff = (ride.dropoff_location || 'Unknown').replace(/'/g, "\\'");
+
+    const popupHtml = `
+        <div style="min-width: 160px; font-family: 'Outfit', sans-serif; padding: 5px;">
+            <div style="margin-bottom: 8px;">
+                <b style="font-size: 14px; color: #1e293b;">${passengerName}</b>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${ride.pickup_location} → ${ride.dropoff_location}</div>
+            </div>
+            <div style="color: #4f46e5; font-weight: 700; font-size: 15px; margin-bottom: 12px;">₱${ride.price}</div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="window.declineRide(${ride.ride_id})" 
+                    style="flex: 1; background: #f1f5f9; color: #64748b; border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12px;">
+                    Skip
+                </button>
+                <button onclick="window.acceptRide(${ride.ride_id}, '${pickup}', '${dropoff}')" 
+                    style="flex: 1.5; background: #4f46e5; color: white; border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);">
+                    Accept
+                </button>
+            </div>
+        </div>
+    `;
+
+    return addMarker(`passenger-${ride.ride_id}`, ride.pickup_lat, ride.pickup_lng, {
+        icon: icon,
+        title: passengerName,
+        popup: popupHtml
+    });
+}
+
+/**
  * Add destination marker (flag icon)
  */
 export function addDestinationMarker(lat, lng, address = 'Destination') {
