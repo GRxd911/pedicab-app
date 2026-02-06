@@ -900,40 +900,40 @@ let currentPassengerLng = null;
 
 // Initialize Map
 // Initialize Map
+// Initialize Map
 async function initPassengerMap() {
     if (passengerMap) return passengerMap;
 
-    try {
-        // Get current location with timeout protection from the service
-        let pos = await getCurrentPosition();
+    const defaultLat = 9.3068;
+    const defaultLng = 123.3033;
 
-        // Fallback if no GPS
-        if (!pos) {
-            console.warn("InitMap: No GPS, using default center.");
-            pos = { lat: 9.3068, lng: 123.3033 };
-        } else {
+    // Use last known if available, else default
+    let startLat = currentPassengerLat || defaultLat;
+    let startLng = currentPassengerLng || defaultLng;
+
+    // Init map IMMEDIATELY (Fast Load) - do not wait for GPS
+    passengerMap = initMap('passenger-map', { lat: startLat, lng: startLng });
+
+    // Try to get fresh GPS in background
+    getCurrentPosition().then(pos => {
+        if (pos) {
             currentPassengerLat = pos.lat;
             currentPassengerLng = pos.lng;
-        }
 
-        passengerMap = initMap('passenger-map', { lat: pos.lat, lng: pos.lng });
-
-        // Add pulsating user marker only if we have real GPS
-        if (currentPassengerLat && currentPassengerLng) {
+            // Add/Update user marker
             const userIcon = `<div class="user-location-marker"></div>`;
             addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
                 icon: userIcon,
                 title: "You",
-                popup: "Your Current Location"
+                popup: `Accuracy: ${Math.round(pos.accuracy)}m`
             });
+
+            // Pan map to user
+            centerMap(pos.lat, pos.lng);
         }
-        return passengerMap;
-    } catch (e) {
-        console.error("Map Init Error:", e);
-        // Try one last time with default to avoid blank screen
-        passengerMap = initMap('passenger-map', { lat: 9.3068, lng: 123.3033 });
-        return passengerMap;
-    }
+    }).catch(console.warn);
+
+    return passengerMap;
 }
 
 // --- EXPLORATION MAP & TABS ---
