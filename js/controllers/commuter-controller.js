@@ -44,6 +44,7 @@ let manualDropoffAddress = null;
 let manualPickupAddress = null;
 let lastRouteCalcTime = 0;
 let lastDriverPos = null;
+let currentTrackingRideId = null;
 
 // DOM Elements
 const elements = {
@@ -221,8 +222,10 @@ async function checkActiveRide(forceShowCompleted = false) {
             const driverDetails = await CommuterRides.fetchDriverDetails(ride.driver_id);
             updateAcceptedUI(ride, driverDetails);
 
-            // Start tracking map
-            startTrackingDriver(ride.driver_id, ride);
+            // Start tracking map (Only if not already tracking this specific ride)
+            if (currentTrackingRideId !== ride.ride_id) {
+                startTrackingDriver(ride.driver_id, ride);
+            }
         }
 
     } catch (err) {
@@ -232,7 +235,11 @@ async function checkActiveRide(forceShowCompleted = false) {
 
 // Start tracking driver during active ride
 async function startTrackingDriver(driverId, ride) {
-    console.log('🚀 Starting Real-time tracking for driver:', driverId);
+    if (currentTrackingRideId === ride.ride_id) return;
+    currentTrackingRideId = ride.ride_id;
+    lastRouteCalcTime = Date.now(); // Reset timestamp to now
+
+    console.log('🚀 Starting Real-time tracking for driver:', driverId, 'Ride:', ride.ride_id);
 
     // Show map container
     const mapContainer = document.getElementById('tracking-map-container');
@@ -442,6 +449,7 @@ function formatTime(seconds) {
 }
 
 function stopTrackingDriver() {
+    currentTrackingRideId = null;
     if (driverLocationInterval) {
         if (typeof driverLocationInterval === 'number') {
             clearInterval(driverLocationInterval);

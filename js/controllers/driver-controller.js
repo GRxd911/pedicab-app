@@ -39,6 +39,7 @@ let driverMap = null;
 let locationWatchId = null;
 let currentDriverLat = null;
 let currentDriverLng = null;
+let currentNavRideId = null;
 
 // --- INITIALIZATION ---
 async function init() {
@@ -240,7 +241,9 @@ function showActiveRideUI(ride) {
     `;
 
     // Also update navigation route if available
-    showNavigationRoute(ride);
+    if (currentNavRideId !== ride.ride_id) {
+        showNavigationRoute(ride);
+    }
 }
 
 async function loadEarnings() {
@@ -370,6 +373,7 @@ function startTrackingLocation() {
 
 async function showNavigationRoute(ride) {
     if (!driverMap) return;
+    currentNavRideId = ride.ride_id;
 
     clearAllMarkers();
     clearRoute();
