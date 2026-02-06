@@ -17,8 +17,12 @@ let currentRoute = null;
 export function initMap(containerId, center = { lat: 10.3157, lng: 123.8854 }, zoom = 13) {
     // Remove existing map if any
     if (map) {
-        clearRoute(); // Clear any routing controls first
-        map.remove();
+        try {
+            clearRoute();
+            map.remove();
+        } catch (e) {
+            console.warn("Safety map removal failed:", e);
+        }
         markers = {};
     }
 
@@ -257,12 +261,8 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         draggableWaypoints: false,
         fitSelectedRoutes: false,
         showAlternatives: false,
-        show: false, // Ensure panel is hidden
+        show: false,
         addWaypoints: false,
-        itinerary: {
-            containerClassName: 'hidden', // Add hidden class to container
-            show: false
-        },
         lineOptions: {
             styles: [
                 { color: '#1e1b4b', opacity: 0.1, weight: 12 },
@@ -316,10 +316,7 @@ export function drawMultiPointRoute(points, options = {}) {
         fitSelectedRoutes: false,
         showAlternatives: false,
         show: false,
-        itinerary: {
-            containerClassName: 'hidden',
-            show: false
-        },
+        addWaypoints: false,
         lineOptions: {
             styles: [
                 { color: '#064e3b', opacity: 0.1, weight: 12 },

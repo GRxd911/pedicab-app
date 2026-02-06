@@ -241,7 +241,7 @@ async function checkActiveRide(forceShowCompleted = false) {
 async function startTrackingDriver(driverId, ride) {
     if (currentTrackingRideId === ride.ride_id) return;
     currentTrackingRideId = ride.ride_id;
-    lastRouteCalcTime = Date.now(); // Reset timestamp to now
+    lastRouteCalcTime = 0; // Force immediate calculation on start
 
     console.log('🚀 Starting Real-time tracking for driver:', driverId, 'Ride:', ride.ride_id);
 

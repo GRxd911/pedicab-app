@@ -666,17 +666,23 @@ async function initExplorationMap() {
         }
     }).catch(console.warn);
 
-    // 4. Fetch Requests
+    // 4. Fetch Requests & Active Trip
     try {
+        const activeRide = await RideService.fetchActiveRide(currentUser.id);
+        if (activeRide) {
+            showNavigationRoute(activeRide);
+        }
+
         const rides = await RideService.fetchPendingRides(currentUser.id);
         rides.forEach(r => {
+            if (activeRide && r.ride_id === activeRide.ride_id) return;
             if (r.pickup_lat) {
                 const passengerName = r.passenger?.fullname || 'Passenger';
                 addRideRequestMarker(r, passengerName);
             }
         });
     } catch (e) {
-        console.error('Error fetching ride markers:', e);
+        console.error('Exploration data load error:', e);
     }
 }
 
