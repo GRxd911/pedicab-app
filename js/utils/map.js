@@ -75,44 +75,24 @@ export function addMarker(id, lat, lng, options = {}) {
     return marker;
 }
 
-/**
- * Update marker position with smooth animation
- */
 export function updateMarkerPosition(id, lat, lng, icon = null) {
     if (markers[id]) {
-        const marker = markers[id];
-        const startLatLng = marker.getLatLng();
-        const endLatLng = L.latLng(lat, lng);
-
-        // Simple linear interpolation for smoothness if distance is small
-        const duration = 1000; // 1s animation
-        const start = performance.now();
-
-        function animate(time) {
-            const elapsed = time - start;
-            const progress = Math.min(elapsed / duration, 1);
-
-            const currentLat = startLatLng.lat + (endLatLng.lat - startLatLng.lat) * progress;
-            const currentLng = startLatLng.lng + (endLatLng.lng - startLatLng.lng) * progress;
-
-            marker.setLatLng([currentLat, currentLng]);
-
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        }
-
-        requestAnimationFrame(animate);
-
+        markers[id].setLatLng([lat, lng]);
         if (icon) {
-            marker.setIcon(L.divIcon({
+            markers[id].setIcon(L.divIcon({
                 className: 'custom-marker',
                 html: icon,
                 iconSize: [40, 40],
-                iconAnchor: [20, 40]
+                iconAnchor: [20, 20]
             }));
         }
+        if (map) map.invalidateSize(); // Fix hidden container issues
+        return true;
+    } else if (icon) {
+        addMarker(id, lat, lng, { icon });
+        return true;
     }
+    return false;
 }
 
 /**
@@ -310,10 +290,13 @@ export function clearRoute() {
  * Fit map to show all markers
  */
 export function fitBounds() {
+    if (!map) return;
     const markerArray = Object.values(markers);
-    if (markerArray.length > 0) {
+    if (markerArray.length === 1) {
+        map.setView(markerArray[0].getLatLng(), 16);
+    } else if (markerArray.length > 1) {
         const group = L.featureGroup(markerArray);
-        map.fitBounds(group.getBounds().pad(0.1));
+        map.fitBounds(group.getBounds().pad(0.2), { maxZoom: 16 });
     }
 }
 

@@ -215,9 +215,10 @@ async function startTrackingDriver(driverId, ride) {
         currentPassengerLat = pos.lat;
         currentPassengerLng = pos.lng;
 
-        // Move "You" marker
+        // Move "You" marker (upsert)
         if (passengerMap) {
-            updateMarkerPosition(`passenger-${currentUser.id}`, pos.lat, pos.lng);
+            const userIcon = `<div class="user-location-marker"></div>`;
+            updateMarkerPosition(`passenger-${currentUser.id}`, pos.lat, pos.lng, userIcon);
         }
     });
 
@@ -243,33 +244,30 @@ async function startTrackingDriver(driverId, ride) {
 async function setupRideMap(ride) {
     if (!passengerMap) {
         console.warn("setupRideMap: Map not ready yet");
-        return;
+        // Try to recover
+        await initPassengerMap();
+        if (!passengerMap) return;
     }
 
-    console.log("📍 Syncing Ride Map Markers...");
+    console.log("📍 Syncing Ride Map Markers for ride:", ride.ride_id);
     clearAllMarkers();
     clearRoute();
 
-    // 1. Add Exact Pickup Marker
+    let markerFound = false;
+
+    // 1. Add Exact Pickup
     if (ride.pickup_lat && ride.pickup_lng) {
         addPassengerMarker('pickup-point', ride.pickup_lat, ride.pickup_lng, ride.pickup_location);
+        markerFound = true;
     }
 
-    // 2. Add Exact Dropoff Marker
+    // 2. Add Exact Dropoff
     if (ride.dropoff_lat && ride.dropoff_lng) {
         addDestinationMarker(ride.dropoff_lat, ride.dropoff_lng, ride.dropoff_location);
+        markerFound = true;
     }
 
-    // 3. Add User Marker (Live Blue Dot)
-    // If we don't have GPS yet, try to get it, or use pickup as fallback for now
-    if (!currentPassengerLat || !currentPassengerLng) {
-        const pos = await getCurrentPosition(); // Try a quick fetch 
-        if (pos) {
-            currentPassengerLat = pos.lat;
-            currentPassengerLng = pos.lng;
-        }
-    }
-
+    // 3. Add User Marker (If we have it)
     if (currentPassengerLat && currentPassengerLng) {
         const userIcon = `<div class="user-location-marker"></div>`;
         addMarker(`passenger-${currentUser.id}`, currentPassengerLat, currentPassengerLng, {
@@ -277,40 +275,47 @@ async function setupRideMap(ride) {
             title: "You",
             popup: "Your Current Position"
         });
+        markerFound = true;
     }
 
-    // 4. If driver exists, add them
+    // 4. Add Driver
     if (ride.driver_id) {
-        try {
-            const { data: driverData, error } = await supabaseClient
-                .from('drivers')
-                .select('*, users(fullname)')
-                .eq('driver_id', ride.driver_id)
-                .single();
-
-            if (driverData && driverData.current_lat && driverData.current_lng) {
-                console.log("🚗 Adding Driver Marker:", driverData.users?.fullname);
-                addDriverMarker(ride.driver_id, driverData.current_lat, driverData.current_lng, driverData.users?.fullname || 'Driver');
-                handleLocationUpdate(driverData);
-            } else {
-                console.warn("Driver location not available in DB");
-            }
-        } catch (e) {
-            console.error("Error fetching driver for map:", e);
-        }
+        // Fetch driver data in background, don't await to avoid blocking UI
+        supabaseClient
+            .from('drivers')
+            .select('*, users(fullname)')
+            .eq('driver_id', ride.driver_id)
+            .single()
+            .then(({ data: driverData }) => {
+                if (driverData && driverData.current_lat && driverData.current_lng) {
+                    addDriverMarker(ride.driver_id, driverData.current_lat, driverData.current_lng, driverData.users?.fullname || 'Driver');
+                    handleLocationUpdate(driverData);
+                    fitBounds(); // Re-fit once driver is found
+                }
+            }).catch(console.error);
     }
 
-    fitBounds();
+    if (markerFound) {
+        fitBounds();
+    }
 }
 
 async function handleLocationUpdate(driverData) {
     if (!driverData.current_lat || !driverData.current_lng) return;
 
-    // Update driver marker smoothly
-    updateMarkerPosition(`driver-${driverData.driver_id}`, driverData.current_lat, driverData.current_lng);
+    // Update driver marker smoothly (upsert)
+    const driverIcon = `
+        <div class="driver-marker-premium">
+            <div class="marker-halo"></div>
+            <div class="marker-core">
+                <i class='bx bxs-car'></i>
+            </div>
+        </div>
+    `;
+    updateMarkerPosition(`driver-${driverData.driver_id}`, driverData.current_lat, driverData.current_lng, driverIcon);
 
-    // Auto-center map if driver is out of view or just follow them
-    centerMap(driverData.current_lat, driverData.current_lng);
+    // Keep both in view
+    fitBounds();
 
     // If we have passenger location, update stats
     if (currentPassengerLat && currentPassengerLng) {
