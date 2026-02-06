@@ -5,6 +5,28 @@ import * as CommuterRides from '../services/commuter-rides.js';
 import * as CommuterProfile from '../services/commuter-profile.js';
 import * as CommuterChat from '../services/commuter-chat.js';
 import * as AudioService from '../services/audio.js';
+import {
+    initMap,
+    addMarker,
+    addDriverMarker,
+    addPassengerMarker,
+    addDestinationMarker,
+    drawRoute,
+    drawMultiPointRoute,
+    fitBounds,
+    centerMap,
+    updateMarkerPosition,
+    clearAllMarkers,
+    clearRoute
+} from '../utils/map.js';
+import {
+    getCurrentPosition,
+    geocodeAddress,
+    reverseGeocode,
+    watchPosition,
+    stopWatchingPosition,
+    calculateDistance
+} from '../services/location.js';
 import { applyTheme, activateSOSUI, showConfirm } from '../utils/ui.js';
 
 // State
@@ -915,8 +937,6 @@ window.closeProfile = (e) => {
 window.checkActiveRide = checkActiveRide;
 
 // --- MAP INTEGRATION ---
-import { initMap, addPassengerMarker, addDriverMarker, addDestinationMarker, drawRoute, drawMultiPointRoute, fitBounds, centerMap, updateMarkerPosition, clearAllMarkers, clearRoute } from '../utils/map.js';
-import { getCurrentPosition, geocodeAddress, watchPosition, stopWatchingPosition, calculateDistance, reverseGeocode } from '../services/location.js';
 
 let passengerMap = null;
 let locationWatchId = null;
