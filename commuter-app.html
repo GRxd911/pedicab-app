@@ -431,6 +431,46 @@
             justify-content: center;
             font-size: 20px;
         }
+
+        .search-suggestions {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            border: 1px solid #eef2f6;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: var(--text-main);
+            border-bottom: 1px solid #f8fafc;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: #f8fafc;
+        }
+
+        .suggestion-item i {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
     </style>
 </head>
 
@@ -479,32 +519,36 @@
                         <p style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-muted);">
                             Pick-up
                             Location</p>
-                        <div class="location-input pickup" style="display: flex; gap: 8px;">
+                        <div class="location-input pickup" style="display: flex; gap: 8px; position: relative;">
                             <div
                                 style="flex: 1; display: flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px;">
                                 <i class='bx bxs-map-pin' style="color: #10b981;"></i>
                                 <input type="text" id="pickup-input" placeholder="Enter Pick-up Location"
+                                    autocomplete="off"
                                     style="border: none; background: transparent; padding: 12px; width: 100%; outline: none; font-size: 14px;">
                             </div>
                             <button onclick="window.switchTab('map')"
                                 style="width: 48px; min-width: 48px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); cursor: pointer;"><i
                                     class='bx bx-map-pin' style="font-size: 20px;"></i></button>
+                            <div id="pickup-suggestions" class="search-suggestions"></div>
                         </div>
 
                         <p
                             style="font-size: 13px; font-weight: 600; margin-top: 15px; margin-bottom: 12px; color: var(--text-muted);">
                             Drop-off
                             Location</p>
-                        <div class="location-input dropoff" style="display: flex; gap: 8px;">
+                        <div class="location-input dropoff" style="display: flex; gap: 8px; position: relative;">
                             <div
                                 style="flex: 1; display: flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px;">
                                 <i class='bx bxs-map' style="color: #ef4444;"></i>
                                 <input type="text" id="dropoff-input" placeholder="Where are you going?"
+                                    autocomplete="off"
                                     style="border: none; background: transparent; padding: 12px; width: 100%; outline: none; font-size: 14px;">
                             </div>
                             <button onclick="window.switchTab('map')"
                                 style="width: 48px; min-width: 48px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); cursor: pointer;"><i
                                     class='bx bx-map-pin' style="font-size: 20px;"></i></button>
+                            <div id="dropoff-suggestions" class="search-suggestions"></div>
                         </div>
 
                         <button class="btn btn-request" id="request-btn">Request Pedicab</button>

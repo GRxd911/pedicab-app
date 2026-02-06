@@ -23,6 +23,7 @@ import {
 import {
     getCurrentPosition,
     geocodeAddress,
+    getAddressSuggestions,
     reverseGeocode,
     watchPosition,
     stopWatchingPosition,
@@ -58,6 +59,8 @@ const elements = {
     dispEmail: document.getElementById('disp-email'),
     profileBtn: document.getElementById('profile-btn'),
     cityAlertBanner: document.getElementById('city-alert-banner'),
+    pickupSuggestions: document.getElementById('pickup-suggestions'),
+    dropoffSuggestions: document.getElementById('dropoff-suggestions'),
     alertText: document.getElementById('alert-text'),
     notifDot: document.getElementById('notif-dot'),
     mobileLayout: document.getElementById('mobile-layout-container')
@@ -166,6 +169,10 @@ function setupListeners() {
             showCityAlert(payload.new.message);
         })
         .subscribe();
+
+    // Autocomplete for Pick-up and Drop-off
+    setupAutocomplete(elements.pickupInput, elements.pickupSuggestions, 'pickup');
+    setupAutocomplete(elements.dropoffInput, elements.dropoffSuggestions, 'dropoff');
 }
 
 // --- RIDE MANAGEMENT ---
@@ -1165,6 +1172,58 @@ window.setPinLocation = (type, lat, lng, address) => {
 
     // Switch back to home
     window.switchTab('home');
+};
+
+function setupAutocomplete(input, container, type) {
+    if (!input || !container) return;
+
+    let timeout = null;
+
+    input.addEventListener('input', () => {
+        clearTimeout(timeout);
+        const query = input.value.trim();
+
+        if (query.length < 3) {
+            container.style.display = 'none';
+            return;
+        }
+
+        timeout = setTimeout(async () => {
+            const suggestions = await getAddressSuggestions(query);
+            if (suggestions.length > 0) {
+                container.innerHTML = suggestions.map(s => `
+                    <div class="suggestion-item" onclick="window.selectSuggestion('${type}', '${s.displayName.replace(/'/g, "\\'")}', ${s.lat}, ${s.lng})">
+                        <i class='bx bxs-map-pin'></i>
+                        <span>${s.displayName}</span>
+                    </div>
+                `).join('');
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }, 400); // 400ms debounce
+    });
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !container.contains(e.target)) {
+            container.style.display = 'none';
+        }
+    });
+}
+
+window.selectSuggestion = (type, address, lat, lng) => {
+    if (type === 'pickup') {
+        elements.pickupInput.value = address;
+        elements.pickupSuggestions.style.display = 'none';
+        selectedPickupCoords = { lat, lng };
+        manualPickupAddress = address;
+    } else {
+        elements.dropoffInput.value = address;
+        elements.dropoffSuggestions.style.display = 'none';
+        selectedDropoffCoords = { lat, lng };
+        manualDropoffAddress = address;
+    }
 };
 
 // Start

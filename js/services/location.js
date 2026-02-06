@@ -202,6 +202,29 @@ export async function geocodeAddress(address) {
 }
 
 /**
+ * Get address suggestions for autocomplete
+ */
+export async function getAddressSuggestions(query) {
+    if (!query || query.length < 3) return [];
+
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Dumaguete City, Philippines')}&limit=5`
+        );
+        const data = await response.json();
+
+        return data.map(item => ({
+            displayName: item.display_name,
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon)
+        }));
+    } catch (error) {
+        console.error('Autocomplete error:', error);
+        return [];
+    }
+}
+
+/**
  * Reverse geocode coordinates to address
  */
 export async function reverseGeocode(lat, lng) {
