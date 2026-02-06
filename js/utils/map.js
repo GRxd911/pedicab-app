@@ -247,6 +247,7 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         draggableWaypoints: false,
         fitSelectedRoutes: true,
         showAlternatives: false,
+        show: false, // Hide the itinerary instructions panel
         lineOptions: {
             styles: [
                 { color: '#1e1b4b', opacity: 0.1, weight: 12 }, // Outer glow
@@ -295,10 +296,11 @@ export function drawMultiPointRoute(points, options = {}) {
         draggableWaypoints: false,
         fitSelectedRoutes: true,
         showAlternatives: false,
+        show: false, // Hide the itinerary instructions panel
         lineOptions: {
             styles: [
-                { color: '#064e3b', opacity: 0.1, weight: 10 },
-                { color: options.color || '#10b981', opacity: 1, weight: 6 }
+                { color: '#064e3b', opacity: 0.1, weight: 12 },
+                { color: options.color || '#10b981', opacity: 1, weight: 8 }
             ]
         },
         createMarker: function () { return null; },
@@ -312,8 +314,8 @@ export function drawMultiPointRoute(points, options = {}) {
         if (routes && routes.length > 0 && options.onRouteFound) {
             currentRoute = routes[0];
             options.onRouteFound({
-                distance: (currentRoute.summary.totalDistance / 1000).toFixed(2),
-                duration: Math.round(currentRoute.summary.totalTime / 60)
+                distance: currentRoute.summary.totalDistance, // meters
+                duration: currentRoute.summary.totalTime // seconds
             });
         }
     });
