@@ -397,19 +397,27 @@ async function handleLocationUpdate(driverData) {
 
             const ride = await CommuterRides.fetchActiveRide(currentUser.id);
             if (ride) {
-                const targetLat = ride.status === 'accepted' ? ride.pickup_lat : ride.dropoff_lat;
-                const targetLng = ride.status === 'accepted' ? ride.pickup_lng : ride.dropoff_lng;
+                // Determine the route sequence
+                let points = [{ lat: driverData.current_lat, lng: driverData.current_lng }];
 
-                if (targetLat && targetLng) {
-                    drawRoute(driverData.current_lat, driverData.current_lng, targetLat, targetLng, {
-                        color: ride.status === 'accepted' ? '#10b981' : '#4f46e5',
-                        onRouteFound: (stats) => {
-                            updateTrackingStats(stats.distance, stats.duration);
-                        }
-                    });
-                    lastRouteCalcTime = now;
-                    lastDriverPos = { lat: driverData.current_lat, lng: driverData.current_lng };
+                if (ride.status === 'accepted') {
+                    // Driver -> Pickup -> Dropoff
+                    points.push({ lat: ride.pickup_lat, lng: ride.pickup_lng });
+                    points.push({ lat: ride.dropoff_lat, lng: ride.dropoff_lng });
+                } else {
+                    // Driver -> Dropoff
+                    points.push({ lat: ride.dropoff_lat, lng: ride.dropoff_lng });
                 }
+
+                drawMultiPointRoute(points, {
+                    color: ride.status === 'accepted' ? '#10b981' : '#4f46e5',
+                    onRouteFound: (stats) => {
+                        updateTrackingStats(stats.distance, stats.duration);
+                    }
+                });
+
+                lastRouteCalcTime = now;
+                lastDriverPos = { lat: driverData.current_lat, lng: driverData.current_lng };
             }
         } else {
             // Just update basic distance stats (straight line approx) but don't redraw the line

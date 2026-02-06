@@ -40,6 +40,9 @@ let locationWatchId = null;
 let currentDriverLat = null;
 let currentDriverLng = null;
 let currentNavRideId = null;
+let activeNavRide = null;
+let isUpdatingNav = false;
+let lastNavUpdatePos = null;
 
 // --- INITIALIZATION ---
 async function init() {
@@ -368,17 +371,36 @@ function startTrackingLocation() {
 
         // Broadcast to DB
         updateDriverLocation(currentUser.id, pos.lat, pos.lng);
+
+        // REAL-TIME NAVIGATION: If we are currently in a ride, update the route line
+        if (currentNavRideId && activeNavRide && !isUpdatingNav) {
+            // Check distance moved to throttle redraws (every 10 meters)
+            let dist = 100;
+            if (lastNavUpdatePos) {
+                dist = calculateDistance(pos.lat, pos.lng, lastNavUpdatePos.lat, lastNavUpdatePos.lng) * 1000;
+            }
+
+            if (dist > 10) {
+                isUpdatingNav = true;
+                showNavigationRoute(activeNavRide).finally(() => {
+                    isUpdatingNav = false;
+                    lastNavUpdatePos = { lat: pos.lat, lng: pos.lng };
+                });
+            }
+        }
     });
 }
 
 async function showNavigationRoute(ride) {
     if (!driverMap) return;
     currentNavRideId = ride.ride_id;
+    activeNavRide = ride; // Store for real-time tracking
 
-    clearAllMarkers();
-    clearRoute();
+    // Sync current GPS coord if we have it
+    const startLat = currentDriverLat || ride.driver_lat || 9.3068;
+    const startLng = currentDriverLng || ride.driver_lng || 123.3033;
 
-    if (currentDriverLat && currentDriverLng) {
+    if (startLat && startLng) {
         const userIcon = `<div class="user-location-marker"></div>`;
         addMarker(`driver-${currentUser.id}`, currentDriverLat, currentDriverLng, {
             icon: userIcon,
@@ -386,7 +408,7 @@ async function showNavigationRoute(ride) {
             popup: "Your Current Position"
         });
 
-        const points = [{ lat: currentDriverLat, lng: currentDriverLng }];
+        const points = [{ lat: startLat, lng: startLng }];
         if (ride.pickup_lat) {
             addPassengerMarker('pickup', ride.pickup_lat, ride.pickup_lng, 'Pickup');
             points.push({ lat: ride.pickup_lat, lng: ride.pickup_lng });
