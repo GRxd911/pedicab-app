@@ -13,6 +13,7 @@ let currentRating = 0;
 let chatRideId = null;
 let chatInterval = null;
 let lastRideStatus = null;
+let detectedAddressString = null;
 
 // DOM Elements
 const elements = {
@@ -419,8 +420,18 @@ window.requestRide = async () => {
         elements.requestBtn.disabled = true;
         elements.requestBtn.innerText = 'Geocoding...';
 
-        // Geocode both locations
-        const pickupCoords = await geocodeAddress(pickup);
+        // Geocode locations
+        // IMPORTANT: If the user hasn't changed the auto-detected address, we use the EXACT GPS coords
+        // This prevents "random location" errors caused by imprecise reverse-geocoding
+        let pickupCoords = null;
+        if (detectedAddressString && pickup === detectedAddressString && currentPassengerLat && currentPassengerLng) {
+            console.log("Using exact GPS coordinates for pickup");
+            pickupCoords = { lat: currentPassengerLat, lng: currentPassengerLng };
+        } else {
+            console.log("Geocoding manual pickup address");
+            pickupCoords = await geocodeAddress(pickup);
+        }
+
         const dropoffCoords = await geocodeAddress(dropoff);
 
         elements.requestBtn.innerText = 'Requesting...';
@@ -836,6 +847,7 @@ async function autoLocateUser() {
         const address = await reverseGeocode(pos.lat, pos.lng);
 
         if (address) {
+            detectedAddressString = address;
             elements.pickupInput.value = address;
             elements.pickupInput.style.border = "2px solid #10b981";
             elements.pickupInput.style.background = "#f0fdf4";
