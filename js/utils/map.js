@@ -231,30 +231,33 @@ export function addSOSMarker(emergencyId, lat, lng, userName = 'Emergency') {
  * Draw route between two points using Leaflet Routing Machine
  */
 export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
-    // Remove existing route
-    if (routeControl) {
-        map.removeControl(routeControl);
+    const waypoints = [
+        L.latLng(startLat, startLng),
+        L.latLng(endLat, endLng)
+    ];
+
+    if (routeControl && map.hasLayer(routeControl)) {
+        console.log("♻️ Updating existing route waypoints...");
+        routeControl.setWaypoints(waypoints);
+        return routeControl;
     }
 
-    // Create routing control
+    // Create new routing control if it doesn't exist or was removed
     routeControl = L.Routing.control({
-        waypoints: [
-            L.latLng(startLat, startLng),
-            L.latLng(endLat, endLng)
-        ],
+        waypoints: waypoints,
         routeWhileDragging: false,
         addWaypoints: false,
         draggableWaypoints: false,
         fitSelectedRoutes: false,
         showAlternatives: false,
-        show: false, // Hide the itinerary instructions panel
+        show: false,
         lineOptions: {
             styles: [
-                { color: '#1e1b4b', opacity: 0.1, weight: 12 }, // Outer glow
-                { color: options.color || '#4f46e5', opacity: 1, weight: 8 } // Main line
+                { color: '#1e1b4b', opacity: 0.1, weight: 12 },
+                { color: options.color || '#4f46e5', opacity: 1, weight: 8 }
             ]
         },
-        createMarker: function () { return null; }, // Don't create default markers
+        createMarker: function () { return null; },
         router: L.Routing.osrmv1({
             serviceUrl: 'https://router.project-osrm.org/route/v1'
         })
@@ -265,12 +268,10 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         const routes = e.routes;
         if (routes && routes.length > 0) {
             currentRoute = routes[0];
-
-            // Call callback if provided
             if (options.onRouteFound) {
                 options.onRouteFound({
-                    distance: currentRoute.summary.totalDistance, // meters
-                    duration: currentRoute.summary.totalTime // seconds
+                    distance: currentRoute.summary.totalDistance,
+                    duration: currentRoute.summary.totalTime
                 });
             }
         }
@@ -283,11 +284,12 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
  * Draw multi-point route (driver -> pickup -> dropoff)
  */
 export function drawMultiPointRoute(points, options = {}) {
-    if (routeControl) {
-        map.removeControl(routeControl);
-    }
-
     const waypoints = points.map(p => L.latLng(p.lat, p.lng));
+
+    if (routeControl && map.hasLayer(routeControl)) {
+        routeControl.setWaypoints(waypoints);
+        return routeControl;
+    }
 
     routeControl = L.Routing.control({
         waypoints: waypoints,
@@ -296,7 +298,7 @@ export function drawMultiPointRoute(points, options = {}) {
         draggableWaypoints: false,
         fitSelectedRoutes: false,
         showAlternatives: false,
-        show: false, // Hide the itinerary instructions panel
+        show: false,
         lineOptions: {
             styles: [
                 { color: '#064e3b', opacity: 0.1, weight: 12 },
