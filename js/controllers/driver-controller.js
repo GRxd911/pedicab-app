@@ -129,6 +129,13 @@ async function init() {
 
     // Refresh active time every minute
     setInterval(updateActiveTime, 60000);
+
+    // BACKGROUND SYNC: Refresh the ride list every 10 seconds as a fallback
+    setInterval(() => {
+        if (currentUser && currentStatus === 'online') {
+            checkContextAndLoad();
+        }
+    }, 10000);
 }
 
 // --- CORE FUNCTIONS ---

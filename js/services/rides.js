@@ -25,25 +25,23 @@ export async function setupRideListener(driverId, onNewRide) {
         }
     } catch (e) { console.warn('Sound initialization skipped'); }
 
-    // 2. Setup Realtime
-    const rideChannel = supabaseClient.channel(`driver-rides-${driverId}`)
+    // 2. Setup Realtime - Listen for ANY change in the rides table
+    const rideChannel = supabaseClient.channel(`global-ride-events`)
         .on('postgres_changes', {
-            event: 'INSERT',
-            table: 'rides',
-            filter: 'status=eq.pending'
-        }, payload => {
-            console.log('RideService: New pending ride received', payload.new.ride_id);
-            // Only play if we are online and it's a new ID
-            if (currentStatus === 'online') {
-                playNotificationSound();
-            }
-            lastSeenId = payload.new.ride_id;
-            if (onNewRide) onNewRide();
-        })
-        .on('postgres_changes', {
-            event: 'UPDATE',
+            event: '*',
             table: 'rides'
         }, payload => {
+            console.log('RideService: Ride table change detected:', payload.eventType);
+
+            // If it's a new pending ride, play the sound
+            if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+                if (currentStatus === 'online' && payload.new.ride_id > lastSeenId) {
+                    playNotificationSound();
+                    lastSeenId = payload.new.ride_id;
+                }
+            }
+
+            // Always trigger the UI refresh callback
             if (onNewRide) onNewRide();
         })
         .subscribe();
