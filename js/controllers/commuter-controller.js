@@ -301,6 +301,16 @@ async function setupRideMap(ride) {
         markerFound = true;
     }
 
+    // 2.5 Draw Full Route (Static initially)
+    if (ride.pickup_lat && ride.pickup_lng && ride.dropoff_lat && ride.dropoff_lng) {
+        drawRoute(ride.pickup_lat, ride.pickup_lng, ride.dropoff_lat, ride.dropoff_lng, {
+            color: '#94a3b8', // Gray for the full planned route
+            onRouteFound: (stats) => {
+                updateTrackingStats(stats.distance, stats.duration);
+            }
+        });
+    }
+
     // 3. Add User Marker (If we have it)
     if (currentPassengerLat && currentPassengerLng) {
         const userIcon = `<div class="user-location-marker"></div>`;
@@ -337,7 +347,7 @@ async function setupRideMap(ride) {
 async function handleLocationUpdate(driverData) {
     if (!driverData.current_lat || !driverData.current_lng) return;
 
-    // Update driver marker smoothly (upsert)
+    // 1. Update driver marker smoothly (upsert)
     const driverIcon = `
         <div class="driver-marker-premium">
             <div class="marker-halo"></div>
@@ -348,26 +358,57 @@ async function handleLocationUpdate(driverData) {
     `;
     updateMarkerPosition(`driver-${driverData.driver_id}`, driverData.current_lat, driverData.current_lng, driverIcon);
 
-    // Keep both in view
-    fitBounds();
+    // 2. LIVE ROUTE DRAWING
+    // Fetch active ride to see current status (accepted vs on-trip)
+    const ride = await CommuterRides.fetchActiveRide(currentUser.id);
+    if (ride) {
+        const targetLat = ride.status === 'accepted' ? ride.pickup_lat : ride.dropoff_lat;
+        const targetLng = ride.status === 'accepted' ? ride.pickup_lng : ride.dropoff_lng;
 
-    // If we have passenger location, update stats
-    if (currentPassengerLat && currentPassengerLng) {
-        const dist = calculateDistance(
-            currentPassengerLat, currentPassengerLng,
-            driverData.current_lat, driverData.current_lng
-        );
-
-        // Update UI stats
-        const distEl = document.getElementById('tracking-distance');
-        const etaEl = document.getElementById('tracking-eta');
-
-        if (distEl) distEl.innerText = `${dist.toFixed(2)} km`;
-        if (etaEl) {
-            const eta = Math.ceil(dist * 6); // 6 mins per km
-            etaEl.innerText = eta < 1 ? 'Less than 1 min' : `${eta} mins`;
+        if (targetLat && targetLng) {
+            drawRoute(driverData.current_lat, driverData.current_lng, targetLat, targetLng, {
+                color: ride.status === 'accepted' ? '#10b981' : '#4f46e5', // Green for pickup, Blue for dropoff
+                onRouteFound: (stats) => {
+                    updateTrackingStats(stats.distance, stats.duration);
+                }
+            });
         }
     }
+
+    // Keep both in view
+    fitBounds();
+}
+
+/**
+ * Format meters to km and seconds to a human-readable string
+ */
+function updateTrackingStats(distanceInMeters, durationInSeconds) {
+    const distEl = document.getElementById('tracking-distance');
+    const etaEl = document.getElementById('tracking-eta');
+
+    if (distEl) {
+        const km = (distanceInMeters / 1000).toFixed(2);
+        distEl.innerText = `${km} km`;
+    }
+
+    if (etaEl) {
+        etaEl.innerText = formatTime(durationInSeconds);
+    }
+}
+
+function formatTime(seconds) {
+    if (seconds < 60) return `${Math.round(seconds)} sec`;
+
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.round(seconds % 60);
+
+    let parts = [];
+    if (hrs > 0) parts.push(`${hrs} hr${hrs > 1 ? 's' : ''}`);
+    if (mins > 0) parts.push(`${mins} min${mins > 1 ? 's' : ''}`);
+    if (parts.length < 2 && secs > 0) parts.push(`${secs} sec`);
+
+    return parts.join(' ') || '0 sec';
 }
 
 function stopTrackingDriver() {

@@ -249,8 +249,8 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         showAlternatives: false,
         lineOptions: {
             styles: [
-                { color: '#1e1b4b', opacity: 0.1, weight: 10 }, // Outer glow
-                { color: options.color || '#4f46e5', opacity: 1, weight: 6 } // Main line
+                { color: '#1e1b4b', opacity: 0.1, weight: 12 }, // Outer glow
+                { color: options.color || '#4f46e5', opacity: 1, weight: 8 } // Main line
             ]
         },
         createMarker: function () { return null; }, // Don't create default markers
@@ -268,8 +268,8 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
             // Call callback if provided
             if (options.onRouteFound) {
                 options.onRouteFound({
-                    distance: (currentRoute.summary.totalDistance / 1000).toFixed(2), // km
-                    duration: Math.round(currentRoute.summary.totalTime / 60) // minutes
+                    distance: currentRoute.summary.totalDistance, // meters
+                    duration: currentRoute.summary.totalTime // seconds
                 });
             }
         }
