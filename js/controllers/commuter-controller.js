@@ -1178,30 +1178,45 @@ function setupAutocomplete(input, container, type) {
     if (!input || !container) return;
 
     let timeout = null;
+    let currentSearchId = 0;
 
     input.addEventListener('input', () => {
         clearTimeout(timeout);
         const query = input.value.trim();
+        const searchId = ++currentSearchId;
 
         if (query.length < 2) {
+            container.innerHTML = '';
             container.style.display = 'none';
             return;
         }
 
+        // Show a subtle loading state if it takes time
         timeout = setTimeout(async () => {
-            const suggestions = await getAddressSuggestions(query);
-            if (suggestions.length > 0) {
-                container.innerHTML = suggestions.map(s => `
-                    <div class="suggestion-item" onclick="window.selectSuggestion('${type}', '${s.displayName.replace(/'/g, "\\'")}', ${s.lat}, ${s.lng})">
-                        <i class='bx bxs-institution' style="color: var(--primary);"></i>
-                        <span style="font-weight: 500;">${s.displayName}</span>
-                    </div>
-                `).join('');
-                container.style.display = 'block';
-            } else {
-                container.style.display = 'none';
+            try {
+                const suggestions = await getAddressSuggestions(query);
+
+                // Only update if this is still the most recent search
+                if (searchId !== currentSearchId) return;
+
+                if (suggestions && suggestions.length > 0) {
+                    container.innerHTML = suggestions.map(s => `
+                        <div class="suggestion-item" onclick="window.selectSuggestion('${type}', '${s.displayName.replace(/'/g, "\\'")}', ${s.lat}, ${s.lng})">
+                            <i class='bx bxs-institution' style="color: var(--primary);"></i>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 700; font-size: 13px;">${s.displayName.split(',')[0]}</span>
+                                <span style="font-size: 10px; color: var(--text-muted);">${s.displayName.split(',').slice(1).join(',') || 'Dumaguete City'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Autocomplete failed:", err);
             }
-        }, 300); // Faster 300ms debounce
+        }, 300);
     });
 
     // Close suggestions when clicking outside

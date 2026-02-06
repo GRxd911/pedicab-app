@@ -208,23 +208,34 @@ export async function getAddressSuggestions(query) {
     if (!query || query.length < 2) return [];
 
     try {
-        // Optimize query for buildings and landmarks
+        // Use viewbox and bounded=1 to limit search strictly to Dumaguete area
+        // Viewbox format: left,top,right,bottom (approx coordinates for Dumaguete)
+        const viewbox = "123.2730,9.3370,123.3323,9.2783";
+
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Dumaguete City, Negros Oriental')}&limit=8&addressdetails=1`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${viewbox}&bounded=1&limit=10&addressdetails=1`,
+            {
+                headers: {
+                    'User-Agent': 'PedicabApp/1.0 (Student Project)'
+                }
+            }
         );
         const data = await response.json();
 
         return data.map(item => {
-            // Create a friendlier display name (Building name first if available)
             const addr = item.address;
             let display = item.display_name;
 
-            if (addr) {
-                const name = addr.university || addr.school || addr.amenity || addr.building || addr.office || addr.shop;
-                if (name) {
-                    const road = addr.road || '';
-                    display = road ? `${name}, ${road}` : name;
-                }
+            // Priority list for names
+            const buildingName = addr.university || addr.school || addr.college ||
+                addr.amenity || addr.building || addr.office ||
+                addr.shop || addr.tourism || addr.historic;
+
+            if (buildingName) {
+                const road = addr.road || addr.suburb || addr.neighbourhood || '';
+                display = road ? `${buildingName}, ${road}` : buildingName;
+            } else if (addr.road) {
+                display = addr.road + (addr.suburb ? `, ${addr.suburb}` : '');
             }
 
             return {
