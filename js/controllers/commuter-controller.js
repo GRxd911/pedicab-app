@@ -16,6 +16,7 @@ import {
     fitBounds,
     centerMap,
     updateMarkerPosition,
+    removeMarker,
     clearAllMarkers,
     clearRoute
 } from '../utils/map.js';
@@ -36,6 +37,10 @@ let chatRideId = null;
 let chatInterval = null;
 let lastRideStatus = null;
 let detectedAddressString = null;
+let selectedPickupCoords = null;
+let selectedDropoffCoords = null;
+let manualDropoffAddress = null;
+let manualPickupAddress = null;
 
 // DOM Elements
 const elements = {
@@ -487,10 +492,12 @@ window.requestRide = async () => {
         elements.requestBtn.innerText = 'Geocoding...';
 
         // Geocode locations
-        // IMPORTANT: If the user hasn't changed the auto-detected address, we use the EXACT GPS coords
-        // This prevents "random location" errors caused by imprecise reverse-geocoding
+        // 1. Pickup Coords handling
         let pickupCoords = null;
-        if (detectedAddressString && pickup === detectedAddressString && currentPassengerLat && currentPassengerLng) {
+        if (selectedPickupCoords && pickup === manualPickupAddress) {
+            console.log("Using map-pinned coordinates for pickup");
+            pickupCoords = selectedPickupCoords;
+        } else if (detectedAddressString && pickup === detectedAddressString && currentPassengerLat && currentPassengerLng) {
             console.log("Using exact GPS coordinates for pickup");
             pickupCoords = { lat: currentPassengerLat, lng: currentPassengerLng };
         } else {
@@ -498,7 +505,15 @@ window.requestRide = async () => {
             pickupCoords = await geocodeAddress(pickup);
         }
 
-        const dropoffCoords = await geocodeAddress(dropoff);
+        // 2. Dropoff Coords handling
+        let dropoffCoords = null;
+        if (selectedDropoffCoords && dropoff === manualDropoffAddress) {
+            console.log("Using map-pinned coordinates for dropoff");
+            dropoffCoords = selectedDropoffCoords;
+        } else {
+            console.log("Geocoding manual dropoff address");
+            dropoffCoords = await geocodeAddress(dropoff);
+        }
 
         elements.requestBtn.innerText = 'Requesting...';
         await CommuterRides.requestRide(currentUser.id, pickup, dropoff, pickupCoords, dropoffCoords);
@@ -1089,7 +1104,68 @@ async function initExplorationMap() {
     } catch (e) {
         console.error("Error loading drivers for map:", e);
     }
+
+    // 5. Add Click Listener for pinning
+    if (passengerMap) {
+        passengerMap.on('click', async (e) => {
+            const { lat, lng } = e.latlng;
+
+            // Remove previous temp marker if any
+            removeMarker('temp-pin');
+
+            // Add a temp pin
+            const tempIcon = `<div style="background: var(--primary); width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><div style="width: 10px; height: 10px; background: white; border-radius: 50%; margin: 7px; transform: rotate(45deg);"></div></div>`;
+            const marker = addMarker('temp-pin', lat, lng, {
+                icon: tempIcon,
+                title: "Selected Location"
+            });
+
+            // Get address for the popup
+            const address = await reverseGeocode(lat, lng);
+
+            const popupHtml = `
+                <div style="padding: 10px; min-width: 150px; font-family: 'Outfit', sans-serif;">
+                    <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">${address}</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button onclick="window.setPinLocation('pickup', ${lat}, ${lng}, '${address.replace(/'/g, "\\'")}')" 
+                            style="background: #10b981; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            SET AS PICKUP
+                        </button>
+                        <button onclick="window.setPinLocation('dropoff', ${lat}, ${lng}, '${address.replace(/'/g, "\\'")}')" 
+                            style="background: #ef4444; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            SET AS DROPOFF
+                        </button>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupHtml).openPopup();
+        });
+    }
 }
+
+window.setPinLocation = (type, lat, lng, address) => {
+    if (type === 'pickup') {
+        selectedPickupCoords = { lat, lng };
+        manualPickupAddress = address;
+        if (elements.pickupInput) {
+            elements.pickupInput.value = address;
+            elements.pickupInput.style.border = "2px solid #10b981";
+        }
+    } else {
+        selectedDropoffCoords = { lat, lng };
+        manualDropoffAddress = address;
+        if (elements.dropoffInput) {
+            elements.dropoffInput.value = address;
+            elements.dropoffInput.style.border = "2px solid #ef4444";
+        }
+    }
+
+    // Inform user
+    alert(`${type === 'pickup' ? 'Pickup' : 'Drop-off'} location set to: ${address}`);
+
+    // Switch back to home
+    window.switchTab('home');
+};
 
 // Start
 init();

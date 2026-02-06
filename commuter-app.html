@@ -479,17 +479,32 @@
                         <p style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-muted);">
                             Pick-up
                             Location</p>
-                        <div class="location-input pickup">
-                            <i class='bx bxs-map-pin'></i>
-                            <input type="text" id="pickup-input" placeholder="Enter Pick-up Location">
+                        <div class="location-input pickup" style="display: flex; gap: 8px;">
+                            <div
+                                style="flex: 1; display: flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px;">
+                                <i class='bx bxs-map-pin' style="color: #10b981;"></i>
+                                <input type="text" id="pickup-input" placeholder="Enter Pick-up Location"
+                                    style="border: none; background: transparent; padding: 12px; width: 100%; outline: none; font-size: 14px;">
+                            </div>
+                            <button onclick="window.switchTab('map')"
+                                style="width: 48px; min-width: 48px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); cursor: pointer;"><i
+                                    class='bx bx-map-pin' style="font-size: 20px;"></i></button>
                         </div>
 
-                        <p style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-muted);">
+                        <p
+                            style="font-size: 13px; font-weight: 600; margin-top: 15px; margin-bottom: 12px; color: var(--text-muted);">
                             Drop-off
                             Location</p>
-                        <div class="location-input dropoff">
-                            <i class='bx bxs-map'></i>
-                            <input type="text" id="dropoff-input" placeholder="Where are you going?">
+                        <div class="location-input dropoff" style="display: flex; gap: 8px;">
+                            <div
+                                style="flex: 1; display: flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px;">
+                                <i class='bx bxs-map' style="color: #ef4444;"></i>
+                                <input type="text" id="dropoff-input" placeholder="Where are you going?"
+                                    style="border: none; background: transparent; padding: 12px; width: 100%; outline: none; font-size: 14px;">
+                            </div>
+                            <button onclick="window.switchTab('map')"
+                                style="width: 48px; min-width: 48px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); cursor: pointer;"><i
+                                    class='bx bx-map-pin' style="font-size: 20px;"></i></button>
                         </div>
 
                         <button class="btn btn-request" id="request-btn">Request Pedicab</button>
