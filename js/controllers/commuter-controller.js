@@ -195,6 +195,7 @@ async function checkActiveRide(forceShowCompleted = false) {
 }
 
 // Start tracking driver during active ride
+// Start tracking driver during active ride
 function startTrackingDriver(driverId, ride) {
     console.log('🚀 Starting Real-time tracking for driver:', driverId);
 
@@ -207,6 +208,19 @@ function startTrackingDriver(driverId, ride) {
 
     // Initial map setup
     setupRideMap(ride);
+
+    // REAL-TIME: Watch USER location (Blue Dot)
+    if (locationWatchId) stopWatchingPosition(locationWatchId);
+
+    locationWatchId = watchPosition((pos) => {
+        currentPassengerLat = pos.lat;
+        currentPassengerLng = pos.lng;
+
+        // Move "You" marker
+        if (passengerMap) {
+            updateMarkerPosition(`passenger-${currentUser.id}`, pos.lat, pos.lng);
+        }
+    });
 
     // REAL-TIME: Listen for driver location changes
     if (driverLocationInterval) {
@@ -307,6 +321,12 @@ function stopTrackingDriver() {
         }
         driverLocationInterval = null;
     }
+
+    if (locationWatchId) {
+        stopWatchingPosition(locationWatchId);
+        locationWatchId = null;
+    }
+
     const mapContainer = document.getElementById('tracking-map-container');
     if (mapContainer) mapContainer.style.display = 'none';
 }
@@ -955,13 +975,23 @@ window.switchTab = (tab) => {
 };
 
 async function initExplorationMap() {
-    // Default location (Dumaguete)
+    // Ensure we have a location
+    if (!currentPassengerLat || !currentPassengerLng) {
+        console.log("Exploration map: Fetching fresh location...");
+        const pos = await getCurrentPosition();
+        if (pos) {
+            currentPassengerLat = pos.lat;
+            currentPassengerLng = pos.lng;
+        } else {
+            console.warn("Exploration map: Could not get GPS. Using default.");
+        }
+    }
+
     const lat = currentPassengerLat || 9.3068;
     const lng = currentPassengerLng || 123.3033;
 
     // Initialize map in the new container
-    // Note: This replaces the tracking map instance because map.js is a singleton
-    passengerMap = initMap('exploration-map', { lat, lng }, 15);
+    passengerMap = initMap('exploration-map', { lat, lng }, 16);
 
     // Clear any existing markers (like old route markers)
     clearAllMarkers();
@@ -969,7 +999,12 @@ async function initExplorationMap() {
 
     // Add User Marker
     if (currentPassengerLat && currentPassengerLng) {
-        addPassengerMarker(currentUser.id, currentPassengerLat, currentPassengerLng, "You");
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`passenger-${currentUser.id}`, currentPassengerLat, currentPassengerLng, {
+            icon: userIcon,
+            title: "You",
+            popup: "Your Current Location"
+        });
     }
 
     // Fetch and show drivers
