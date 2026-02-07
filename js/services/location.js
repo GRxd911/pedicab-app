@@ -204,16 +204,18 @@ export async function geocodeAddress(address) {
 /**
  * Get address suggestions for autocomplete
  */
-export async function getAddressSuggestions(query) {
+export async function getAddressSuggestions(query, userLat = null, userLng = null) {
     if (!query || query.length < 2) return [];
 
     try {
-        // Use viewbox and bounded=1 to limit search strictly to Dumaguete area
-        // Viewbox format: left,top,right,bottom (approx coordinates for Dumaguete)
-        const viewbox = "123.2730,9.3370,123.3323,9.2783";
+        // Build proximity parameter if user location is available
+        let proximityParam = '';
+        if (userLat && userLng) {
+            proximityParam = `&lat=${userLat}&lon=${userLng}`;
+        }
 
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${viewbox}&bounded=1&limit=10&addressdetails=1`,
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${proximityParam}&limit=10&addressdetails=1`,
             {
                 headers: {
                     'User-Agent': 'PedicabApp/1.0 (Student Project)'

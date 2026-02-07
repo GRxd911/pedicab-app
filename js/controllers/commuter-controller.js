@@ -1341,10 +1341,14 @@ function setupAutocomplete(input, container, type) {
             return;
         }
 
+        // Show searching indicator immediately
+        container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 12px;"><i class="bx bx-loader-alt bx-spin"></i> Searching...</div>';
+        container.style.display = 'block';
+
         // Show a subtle loading state if it takes time
         timeout = setTimeout(async () => {
             try {
-                const suggestions = await getAddressSuggestions(query);
+                const suggestions = await getAddressSuggestions(query, currentPassengerLat, currentPassengerLng);
 
                 // Only update if this is still the most recent search
                 if (searchId !== currentSearchId) return;
@@ -1355,18 +1359,19 @@ function setupAutocomplete(input, container, type) {
                             <i class='bx bxs-institution' style="color: var(--primary);"></i>
                             <div style="display: flex; flex-direction: column;">
                                 <span style="font-weight: 700; font-size: 13px;">${s.displayName.split(',')[0]}</span>
-                                <span style="font-size: 10px; color: var(--text-muted);">${s.displayName.split(',').slice(1).join(',') || 'Dumaguete City'}</span>
+                                <span style="font-size: 10px; color: var(--text-muted);">${s.displayName.split(',').slice(1).join(',') || 'Nearby'}</span>
                             </div>
                         </div>
                     `).join('');
                     container.style.display = 'block';
                 } else {
-                    container.style.display = 'none';
+                    container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 12px;">No results found</div>';
                 }
             } catch (err) {
                 console.error("Autocomplete failed:", err);
+                container.innerHTML = '<div style="padding: 12px; text-align: center; color: #ef4444; font-size: 12px;">Search failed. Try again.</div>';
             }
-        }, 300);
+        }, 150);
     });
 
     // Close suggestions when clicking outside
