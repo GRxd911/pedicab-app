@@ -8,6 +8,13 @@
     <title>Create Account | Pedicab Support System</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+
+    <!-- PWA / Mobile Home Screen -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pedicab">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
     <style>
         body {
             margin: 0;
@@ -122,6 +129,52 @@
     <script src="js/supabase-config.js"></script>
 
     <script>
+        // Custom Premium Alert Modal
+        function showAlert(title, message, type = 'error') {
+            return new Promise((resolve) => {
+                const existing = document.getElementById('custom-alert-overlay');
+                if (existing) existing.remove();
+
+                const overlay = document.createElement('div');
+                overlay.id = 'custom-alert-overlay';
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 24px;
+                `;
+
+                const icon = type === 'error' ? 'bx-error-circle' : 'bx-check-circle';
+                const iconColor = type === 'error' ? '#ef4444' : '#10b981';
+                const iconBg = type === 'error' ? '#fef2f2' : '#f0fdf4';
+
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: white; width: 100%; max-width: 320px; border-radius: 28px;
+                    padding: 32px 24px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+                `;
+
+                card.innerHTML = `
+                    <div style="width: 56px; height: 56px; background: ${iconBg}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class='bx ${icon}' style="font-size: 28px; color: ${iconColor};"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">${title}</h3>
+                    <p style="font-size: 14px; color: #64748b; line-height: 1.5; margin-bottom: 28px;">${message}</p>
+                    <button id="alert-ok" style="width: 100%; height: 48px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer;">Okay</button>
+                `;
+
+                overlay.appendChild(card);
+                document.body.appendChild(overlay);
+
+                const cleanup = () => {
+                    overlay.remove();
+                    resolve();
+                };
+
+                overlay.querySelector('#alert-ok').onclick = cleanup;
+                overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+            });
+        }
+
         // Toggle Password Visibility
         const togglePassword = document.querySelector('#togglePassword');
         const passwordField = document.querySelector('#password');
@@ -158,7 +211,7 @@
             const role = document.querySelector('.role-option.active').innerText.trim().toLowerCase();
             const plateNumber = document.getElementById('pedicabId').value;
 
-            // 1. Sign up the user in Supabase Auth
+            // 1. Create the user account in the cloud auth system
             const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
@@ -171,7 +224,7 @@
             });
 
             if (error) {
-                alert('Signup Error: ' + error.message);
+                await showAlert('Signup Error', error.message);
                 return;
             }
 
@@ -198,7 +251,7 @@
                         ]);
                 }
 
-                alert('Account created! Please check your Gmail inbox and click the verification link to activate your account.');
+                await showAlert('Account Created', 'Please check your Gmail inbox and click the verification link to activate your account.', 'success');
                 window.location.href = 'signin.html';
             }
         });
