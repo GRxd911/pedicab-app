@@ -760,7 +760,11 @@ window.sendChat = async () => {
 
 // --- PROFILE & CONTACT ACTIONS ---
 
-window.logout = () => CommuterAuth.logoutPassenger();
+window.logout = async () => {
+    if (await showConfirm('Are you sure you want to logout?')) {
+        CommuterAuth.logoutPassenger();
+    }
+};
 
 window.openHistory = async () => {
     const header = document.querySelector('.app-header');

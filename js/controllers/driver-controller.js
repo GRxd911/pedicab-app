@@ -520,8 +520,10 @@ window.submitFare = async () => {
 };
 
 window.logout = async () => {
-    await supabaseClient.auth.signOut();
-    window.location.href = 'signin.html';
+    if (await showConfirm('Are you sure you want to logout?')) {
+        await supabaseClient.auth.signOut();
+        window.location.href = 'signin.html';
+    }
 };
 
 window.openChat = (rideId, name) => {
