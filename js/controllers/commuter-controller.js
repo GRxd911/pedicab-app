@@ -101,6 +101,10 @@ async function init() {
     // Auto-fill pickup location
     autoLocateUser();
 
+    // Setup autocomplete for address inputs
+    setupAutocomplete(elements.pickupInput, elements.pickupSuggestions, 'pickup');
+    setupAutocomplete(elements.dropoffInput, elements.dropoffSuggestions, 'dropoff');
+
     // Polling fallbacks
     setInterval(() => CommuterRides.fetchAvailableDrivers().then(updateAvailableDriversUI), 15000);
     setInterval(() => checkActiveRide(), 5000);
