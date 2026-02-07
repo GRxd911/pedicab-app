@@ -89,7 +89,7 @@
                 </div>
 
                 <div style="text-align: right; margin-bottom: 24px;">
-                    <a href="#"
+                    <a href="#" id="forgotPassword"
                         style="color: var(--primary); font-size: 14px; text-decoration: none; font-weight: 500;">Forgot
                         password?</a>
                 </div>
@@ -135,38 +135,13 @@
         // Custom Premium Alert Modal
         function showAlert(title, message, type = 'error') {
             return new Promise((resolve) => {
-                // Remove existing if any
-                const existing = document.getElementById('custom-alert-overlay');
-                if (existing) existing.remove();
-
                 const overlay = document.createElement('div');
                 overlay.id = 'custom-alert-overlay';
                 overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(15, 23, 42, 0.4);
-                    backdrop-filter: blur(8px);
-                    -webkit-backdrop-filter: blur(8px);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 100000;
-                    padding: 24px;
-                    animation: fadeInAlert 0.2s ease-out;
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 24px;
                 `;
-
-                if (!document.getElementById('alert-animation-style')) {
-                    const style = document.createElement('style');
-                    style.id = 'alert-animation-style';
-                    style.innerHTML = `
-                        @keyframes fadeInAlert { from { opacity: 0; } to { opacity: 1; } }
-                        @keyframes scaleInAlert { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-                    `;
-                    document.head.appendChild(style);
-                }
 
                 const icon = type === 'error' ? 'bx-error-circle' : 'bx-info-circle';
                 const iconColor = type === 'error' ? '#ef4444' : '#3b82f6';
@@ -174,14 +149,8 @@
 
                 const card = document.createElement('div');
                 card.style.cssText = `
-                    background: white;
-                    width: 100%;
-                    max-width: 320px;
-                    border-radius: 28px;
-                    padding: 32px 24px 24px;
-                    text-align: center;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-                    animation: scaleInAlert 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    background: white; width: 100%; max-width: 320px; border-radius: 28px;
+                    padding: 32px 24px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
                 `;
 
                 card.innerHTML = `
@@ -190,15 +159,14 @@
                     </div>
                     <h3 style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">${title}</h3>
                     <p style="font-size: 14px; color: #64748b; line-height: 1.5; margin-bottom: 28px;">${message}</p>
-                    <button id="alert-ok" style="width: 100%; height: 48px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Okay</button>
+                    <button id="alert-ok" style="width: 100%; height: 48px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer;">Okay</button>
                 `;
 
                 overlay.appendChild(card);
                 document.body.appendChild(overlay);
 
                 const cleanup = () => {
-                    overlay.style.opacity = '0';
-                    setTimeout(() => overlay.remove(), 200);
+                    overlay.remove();
                     resolve();
                 };
 
@@ -206,6 +174,68 @@
                 overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
             });
         }
+
+        // Forgot Password Modal
+        function showResetModal() {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.id = 'reset-modal-overlay';
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 24px;
+                `;
+
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: white; width: 100%; max-width: 360px; border-radius: 28px;
+                    padding: 32px 24px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+                `;
+
+                card.innerHTML = `
+                    <div style="width: 56px; height: 56px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class='bx bx-key' style="font-size: 28px; color: #3b82f6;"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">Reset Password</h3>
+                    <p style="font-size: 14px; color: #64748b; margin-bottom: 24px;">Enter your email to receive a password reset link.</p>
+                    <input type="email" id="reset-email" placeholder="name@example.com" 
+                        style="width: 100%; height: 48px; padding: 0 16px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; font-size: 14px;">
+                    <button id="send-reset" style="width: 100%; height: 48px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 700;">Send Link</button>
+                    <button id="cancel-reset" style="width: 100%; height: 48px; background: transparent; color: #64748b; border: none; margin-top: 8px; font-size: 14px;">Cancel</button>
+                `;
+
+                overlay.appendChild(card);
+                document.body.appendChild(overlay);
+
+                const cleanup = () => overlay.remove();
+
+                overlay.querySelector('#cancel-reset').onclick = cleanup;
+                overlay.querySelector('#send-reset').onclick = async () => {
+                    const email = document.getElementById('reset-email').value;
+                    if (!email) return;
+
+                    const btn = document.getElementById('send-reset');
+                    btn.innerText = 'Sending...';
+                    btn.disabled = true;
+
+                    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                        redirectTo: window.location.origin + '/reset-password.html',
+                    });
+
+                    cleanup();
+                    if (error) {
+                        await showAlert('Error', error.message);
+                    } else {
+                        await showAlert('Email Sent', 'If this email belongs to an account, you will receive a reset link shortly.', 'success');
+                    }
+                };
+            });
+        }
+
+        document.getElementById('forgotPassword').addEventListener('click', (e) => {
+            e.preventDefault();
+            showResetModal();
+        });
 
         document.getElementById('signinForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -233,8 +263,11 @@
             });
 
             if (error) {
-                // If we know the email exists but signin fails, it's the password
-                await showAlert('Incorrect Password', 'The password you entered is incorrect. Please try again.');
+                if (error.message.toLowerCase().includes('email not confirmed')) {
+                    await showAlert('Email Not Verified', 'Please check your Gmail inbox and click the verification link before signing in.', 'info');
+                } else {
+                    await showAlert('Incorrect Password', 'The password you entered is incorrect. Please try again.');
+                }
                 return;
             }
 

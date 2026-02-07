@@ -181,7 +181,7 @@
                 // 2. Save additional info to our 'users' table
                 const { error: profileError } = await supabaseClient
                     .from('users')
-                    .insert([
+                    .upsert([
                         { id: user.id, fullname: fullName, email: email, role: role }
                     ]);
 
@@ -193,12 +193,12 @@
                 if (role === 'driver') {
                     await supabaseClient
                         .from('drivers')
-                        .insert([
+                        .upsert([
                             { driver_id: user.id, pedicab_plate: plateNumber, status: 'offline' }
                         ]);
                 }
 
-                alert('Account created successfully! You can now sign in.');
+                alert('Account created! Please check your Gmail inbox and click the verification link to activate your account.');
                 window.location.href = 'signin.html';
             }
         });
