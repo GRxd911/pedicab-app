@@ -1,6 +1,6 @@
 
 import { initAudio, playNotificationSound, playAlertSound } from '../services/audio.js';
-import { updateAvatarUI, updateStatusUI, previewAvatar, applyTheme, activateSOSUI, showConfirm } from '../utils/ui.js';
+import { updateAvatarUI, updateStatusUI, previewAvatar, applyTheme, activateSOSUI, showConfirm, showAlert } from '../utils/ui.js';
 import * as DriverService from '../services/driver.js';
 import * as RideService from '../services/rides.js';
 import { supabaseClient } from '../services/config.js';
@@ -607,10 +607,10 @@ window.saveProfile = async () => {
             data: { full_name: name, avatar_url: avatarUrl, preferred_color: color }
         });
 
-        alert('Profile updated!');
+        await showAlert('Profile updated!', 'success');
         location.reload();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Error: ' + e.message, 'error');
     } finally {
         btn.innerText = 'Save Changes';
         btn.disabled = false;

@@ -29,7 +29,7 @@ import {
     stopWatchingPosition,
     calculateDistance
 } from '../services/location.js';
-import { applyTheme, activateSOSUI, showConfirm } from '../utils/ui.js';
+import { applyTheme, activateSOSUI, showConfirm, showAlert } from '../utils/ui.js';
 
 // State
 let currentUser = null;
@@ -860,10 +860,10 @@ window.saveProfile = async () => {
         btn.innerText = 'Saving...';
         btn.disabled = true;
         await CommuterProfile.updateProfile(currentUser.id, name, phone, file, color);
-        alert('Profile updated!');
+        await showAlert('Profile updated!', 'success');
         location.reload();
     } catch (err) {
-        alert(err.message);
+        await showAlert(err.message, 'error');
     } finally {
         btn.innerText = 'Save Changes';
         btn.disabled = false;

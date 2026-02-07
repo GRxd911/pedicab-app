@@ -288,3 +288,96 @@ export function showConfirm(message) {
         overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
     });
 }
+
+/**
+ * Premium Replacement for window.alert()
+ * Usage: await showAlert("Message...", "success" | "error" | "info");
+ */
+export function showAlert(message, type = 'info') {
+    return new Promise((resolve) => {
+        // Create Overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+            padding: 24px;
+            animation: fadeInConfirm 0.2s ease-out;
+        `;
+
+        if (!document.getElementById('confirm-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'confirm-animation-style';
+            style.innerHTML = `
+                @keyframes fadeInConfirm { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes scaleInConfirm { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Icon configuration
+        let iconClass = 'bx-info-circle';
+        let iconColor = 'var(--primary)';
+        let bgColor = '#e0f2fe';
+
+        if (type === 'success') {
+            iconClass = 'bx-check';
+            iconColor = '#10b981';
+            bgColor = '#d1fae5';
+        } else if (type === 'error') {
+            iconClass = 'bx-x';
+            iconColor = '#ef4444';
+            bgColor = '#fee2e2';
+        }
+
+        // Create Card
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: white;
+            width: 100%;
+            max-width: 320px;
+            border-radius: 28px;
+            padding: 32px 24px 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: scaleInConfirm 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        `;
+
+        card.innerHTML = `
+            <div style="width: 56px; height: 56px; background: ${bgColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <i class='bx ${iconClass}' style="font-size: 32px; color: ${iconColor};"></i>
+            </div>
+            <p style="font-size: 16px; font-weight: 600; color: #1e293b; line-height: 1.5; margin-bottom: 28px;">${message}</p>
+            <div style="display: flex; gap: 12px;">
+                <button id="alert-ok" style="width: 100%; height: 48px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">OK</button>
+            </div>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        // Events
+        const cleanup = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+            resolve();
+        };
+
+        const btn = overlay.querySelector('#alert-ok');
+        btn.onclick = () => cleanup();
+        // Also allow clicking backdrop to dismiss
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+
+        // Focus button for accessibility
+        btn.focus();
+    });
+}
