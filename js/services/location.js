@@ -208,14 +208,23 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
     if (!query || query.length < 2) return [];
 
     try {
-        // Build proximity parameter if user location is available
-        let proximityParam = '';
+        // Build priority parameters
+        let locationParams = '';
         if (userLat && userLng) {
-            proximityParam = `&lat=${userLat}&lon=${userLng}`;
+            // 1. proximity: biases search center
+            locationParams += `&lat=${userLat}&lon=${userLng}`;
+
+            // 2. viewbox: effectively boosts local results (approx 50km box)
+            const delta = 0.4; // roughly 40-50km
+            const left = userLng - delta;
+            const top = userLat + delta;
+            const right = userLng + delta;
+            const bottom = userLat - delta;
+            locationParams += `&viewbox=${left},${top},${right},${bottom}&bounded=0`;
         }
 
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${proximityParam}&countrycodes=ph&limit=10&addressdetails=1`,
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`,
             {
                 headers: {
                     'User-Agent': 'PedicabApp/1.0 (Student Project)'
