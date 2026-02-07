@@ -63,7 +63,7 @@
             status.innerText = "Attempting to create...";
             status.style.color = "blue";
 
-            // 1. Sign up the user properly via Supabase Auth
+            // 1. Create the account properly via the auth system
             const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
