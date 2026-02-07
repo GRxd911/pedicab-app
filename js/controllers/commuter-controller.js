@@ -1097,6 +1097,16 @@ async function initPassengerMap() {
     // Init map IMMEDIATELY (Fast Load) - do not wait for GPS
     passengerMap = initMap(containerId, { lat: startLat, lng: startLng });
 
+    // 🟢 INSTANT DOT: If we have cached location, show it NOW
+    if (currentPassengerLat && currentPassengerLng) {
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`passenger-${currentUser.id}`, currentPassengerLat, currentPassengerLng, {
+            icon: userIcon,
+            title: "You",
+            popup: `Last Known Location`
+        });
+    }
+
     // Start continuous tracking for passenger too
     startSelfTracking();
 
