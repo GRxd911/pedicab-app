@@ -224,7 +224,7 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
         );
         const data = await response.json();
 
-        return data.map(item => {
+        const results = data.map(item => {
             const addr = item.address;
             let display = item.display_name;
 
@@ -240,12 +240,29 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
                 display = addr.road + (addr.suburb ? `, ${addr.suburb}` : '');
             }
 
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lon);
+
+            // Calculate distance for sorting if user location is known
+            let distance = 0;
+            if (userLat && userLng) {
+                distance = calculateDistance(userLat, userLng, lat, lng);
+            }
+
             return {
                 displayName: display,
-                lat: parseFloat(item.lat),
-                lng: parseFloat(item.lon)
+                lat: lat,
+                lng: lng,
+                distance: distance // Store distance for sorting
             };
         });
+
+        // 🟢 SORT BY DISTANCE (Nearest first)
+        if (userLat && userLng) {
+            results.sort((a, b) => a.distance - b.distance);
+        }
+
+        return results;
     } catch (error) {
         console.error('Autocomplete error:', error);
         return [];
