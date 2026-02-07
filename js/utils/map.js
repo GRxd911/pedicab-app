@@ -39,6 +39,21 @@ export function initMap(containerId, center = { lat: 10.3157, lng: 123.8854 }, z
         maxZoom: 20
     }).addTo(map);
 
+    // Add smooth marker transition CSS
+    if (!document.getElementById('map-marker-vitals')) {
+        const style = document.createElement('style');
+        style.id = 'map-marker-vitals';
+        style.innerHTML = `
+            .leaflet-marker-icon {
+                transition: transform 0.8s linear, opacity 0.3s ease;
+            }
+            .custom-marker {
+                transition: all 0.8s linear;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     return map;
 }
 
@@ -54,17 +69,23 @@ export function addMarker(id, lat, lng, options = {}) {
     // Create custom icon if specified
     let icon = null;
     if (options.icon) {
+        // Standardize anchors: Use [20, 20] for circular icons, [20, 40] for pin icons
+        const anchor = options.anchor || [20, 20];
         icon = L.divIcon({
             className: 'custom-marker',
             html: options.icon,
             iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
+            iconAnchor: anchor,
+            popupAnchor: [0, -anchor[1] / 2] // Dynamic popup offset
         });
     }
 
+    const nLat = Number(lat);
+    const nLng = Number(lng);
+    if (isNaN(nLat) || isNaN(nLng)) return null;
+
     // Create marker
-    const marker = L.marker([lat, lng], {
+    const marker = L.marker([nLat, nLng], {
         icon: icon,
         title: options.title || ''
     }).addTo(map);
@@ -80,22 +101,30 @@ export function addMarker(id, lat, lng, options = {}) {
     return marker;
 }
 
-export function updateMarkerPosition(id, lat, lng, icon = null) {
+export function updateMarkerPosition(id, lat, lng, icon = null, options = {}) {
     if (markers[id]) {
-        markers[id].setLatLng([lat, lng]);
+        const nLat = Number(lat);
+        const nLng = Number(lng);
+
+        if (isNaN(nLat) || isNaN(nLng)) return false;
+
+        markers[id].setLatLng([nLat, nLng]);
+
         if (icon) {
+            const anchor = options.anchor || [20, 20];
             markers[id].setIcon(L.divIcon({
                 className: 'custom-marker',
                 html: icon,
                 iconSize: [40, 40],
-                iconAnchor: [20, 20]
+                iconAnchor: anchor,
+                popupAnchor: [0, -anchor[1] / 2]
             }));
         }
-        if (map) map.invalidateSize(); // Fix hidden container issues
+        // Force Leaflet to recalculate its container bounds to prevent "shifted" map tiles/markers
+        if (map) map.invalidateSize();
         return true;
     } else if (icon) {
-        addMarker(id, lat, lng, { icon });
-        return true;
+        return addMarker(id, lat, lng, { icon, ...options });
     }
     return false;
 }
@@ -205,6 +234,7 @@ export function addDestinationMarker(lat, lng, address = 'Destination') {
 
     return addMarker('destination', lat, lng, {
         icon: icon,
+        anchor: [20, 40], // Pins point down, so anchor at bottom center
         title: address,
         popup: `<b>Dropoff</b><br>${address}`
     });
@@ -236,21 +266,33 @@ export function addSOSMarker(emergencyId, lat, lng, userName = 'Emergency') {
  * Draw route between two points using Leaflet Routing Machine
  */
 export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
+    const lat1 = Number(startLat);
+    const lng1 = Number(startLng);
+    const lat2 = Number(endLat);
+    const lng2 = Number(endLng);
+
+    if (isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2)) {
+        console.warn("⚠️ Invalid coordinates for drawRoute:", { startLat, startLng, endLat, endLng });
+        return null;
+    }
+
     const waypoints = [
-        L.latLng(startLat, startLng),
-        L.latLng(endLat, endLng)
+        L.latLng(lat1, lng1),
+        L.latLng(lat2, lng2)
     ];
 
-    // Check if control already exists - update it instead of creating new one
-    if (routeControl) {
+    const isNewColor = options.color && routeControl && routeControl.options.lineOptions.styles[1].color !== options.color;
+
+    if (routeControl && !isNewColor) {
         try {
-            console.log("♻️ Updating existing route waypoints...");
             routeControl.setWaypoints(waypoints);
             return routeControl;
         } catch (e) {
-            console.warn("⚠️ Route update failed, will recreate:", e);
+            console.warn("⚠️ Route update failed, recreating:", e);
             clearRoute();
         }
+    } else if (routeControl) {
+        clearRoute(); // Clear if color changed or update failed
     }
 
     // Create new routing control
@@ -262,7 +304,7 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
         fitSelectedRoutes: false,
         showAlternatives: false,
         show: false,
-        addWaypoints: false,
+        itinerary: { show: false },
         lineOptions: {
             styles: [
                 { color: '#1e1b4b', opacity: 0.1, weight: 12 },
@@ -296,16 +338,36 @@ export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
  * Draw multi-point route (driver -> pickup -> dropoff)
  */
 export function drawMultiPointRoute(points, options = {}) {
-    const waypoints = points.map(p => L.latLng(p.lat, p.lng));
+    const cleanPoints = points.filter(p => p && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)));
+    if (cleanPoints.length < 2) return null;
 
-    if (routeControl) {
+    const waypoints = cleanPoints.map(p => L.latLng(Number(p.lat), Number(p.lng)));
+
+    const isNewColor = options.color && routeControl && routeControl.options.lineOptions.styles[1].color !== options.color;
+
+    if (routeControl && !isNewColor) {
         try {
+            // ALWAYS update the listener to ensure latest callback is used
+            routeControl.off('routesfound');
+            routeControl.on('routesfound', function (e) {
+                const routes = e.routes;
+                if (routes && routes.length > 0 && options.onRouteFound) {
+                    currentRoute = routes[0];
+                    options.onRouteFound({
+                        distance: currentRoute.summary.totalDistance,
+                        duration: currentRoute.summary.totalTime
+                    });
+                }
+            });
+
             routeControl.setWaypoints(waypoints);
             return routeControl;
         } catch (e) {
-            console.warn("⚠️ Multi-route update failed, will recreate:", e);
+            console.warn("⚠️ Multi-route update failed, recreating:", e);
             clearRoute();
         }
+    } else if (routeControl) {
+        clearRoute();
     }
 
     routeControl = L.Routing.control({
@@ -316,7 +378,7 @@ export function drawMultiPointRoute(points, options = {}) {
         fitSelectedRoutes: false,
         showAlternatives: false,
         show: false,
-        addWaypoints: false,
+        itinerary: { show: false },
         lineOptions: {
             styles: [
                 { color: '#064e3b', opacity: 0.1, weight: 12 },
@@ -334,8 +396,8 @@ export function drawMultiPointRoute(points, options = {}) {
         if (routes && routes.length > 0 && options.onRouteFound) {
             currentRoute = routes[0];
             options.onRouteFound({
-                distance: currentRoute.summary.totalDistance, // meters
-                duration: currentRoute.summary.totalTime // seconds
+                distance: currentRoute.summary.totalDistance,
+                duration: currentRoute.summary.totalTime
             });
         }
     });

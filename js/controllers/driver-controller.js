@@ -373,6 +373,7 @@ function startTrackingLocation() {
         updateDriverLocation(currentUser.id, pos.lat, pos.lng);
 
         // REAL-TIME NAVIGATION: If we are currently in a ride, update the route line
+        // FAST: Uses already loaded ride object to avoid DB hits on every GPS tick
         if (currentNavRideId && activeNavRide && !isUpdatingNav) {
             // Check distance moved to throttle redraws (every 10 meters)
             let dist = 100;

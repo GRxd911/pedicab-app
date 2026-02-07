@@ -46,6 +46,7 @@ let lastRouteCalcTime = 0;
 let lastDriverPos = null;
 let currentTrackingRideId = null;
 let isCheckingRide = false;
+let activeTrackingRide = null;
 
 // DOM Elements
 const elements = {
@@ -227,6 +228,9 @@ async function checkActiveRide(forceShowCompleted = false) {
             // Start tracking map (Only if not already tracking this specific ride)
             if (currentTrackingRideId !== ride.ride_id) {
                 startTrackingDriver(ride.driver_id, ride);
+            } else {
+                // Update the stored ride object in case status or coords changed
+                activeTrackingRide = ride;
             }
         }
 
@@ -241,6 +245,7 @@ async function checkActiveRide(forceShowCompleted = false) {
 async function startTrackingDriver(driverId, ride) {
     if (currentTrackingRideId === ride.ride_id) return;
     currentTrackingRideId = ride.ride_id;
+    activeTrackingRide = ride; // Store for location updates
     lastRouteCalcTime = 0; // Force immediate calculation on start
 
     console.log('🚀 Starting Real-time tracking for driver:', driverId, 'Ride:', ride.ride_id);
@@ -389,13 +394,13 @@ async function handleLocationUpdate(driverData) {
         }
 
         // Only redraw route if:
-        // a) It's been more than 15 seconds
-        // b) Driver moved more than 50 meters
+        // a) It's been more than 8 seconds (Lowered from 15s for better "Realtime" feel)
+        // b) Driver moved more than 30 meters (Lowered from 50m)
         // c) It's the first time
-        if (timeSinceLastRoute > 15000 || distMoved > 50 || lastRouteCalcTime === 0) {
+        if (timeSinceLastRoute > 8000 || distMoved > 30 || lastRouteCalcTime === 0) {
             console.log(`🗺️ Redrawing route. Moved: ${distMoved.toFixed(0)}m, Time: ${Math.round(timeSinceLastRoute / 1000)}s`);
 
-            const ride = await CommuterRides.fetchActiveRide(currentUser.id);
+            const ride = activeTrackingRide;
             if (ride) {
                 // Determine the route sequence
                 let points = [{ lat: driverData.current_lat, lng: driverData.current_lng }];
@@ -468,6 +473,7 @@ function formatTime(seconds) {
 
 function stopTrackingDriver() {
     currentTrackingRideId = null;
+    activeTrackingRide = null;
     if (driverLocationInterval) {
         if (typeof driverLocationInterval === 'number') {
             clearInterval(driverLocationInterval);
@@ -1078,8 +1084,17 @@ async function initPassengerMap() {
     let startLat = currentPassengerLat || defaultLat;
     let startLng = currentPassengerLng || defaultLng;
 
+    // Detect which container is actually visible
+    const mapView = document.getElementById('view-map');
+    const containerId = (mapView && mapView.style.display === 'block') ? 'exploration-map' : 'passenger-map';
+
+    console.log(`📍 Initializing Passenger Map on container: ${containerId}`);
+
     // Init map IMMEDIATELY (Fast Load) - do not wait for GPS
-    passengerMap = initMap('passenger-map', { lat: startLat, lng: startLng });
+    passengerMap = initMap(containerId, { lat: startLat, lng: startLng });
+
+    // Start continuous tracking for passenger too
+    startSelfTracking();
 
     // Try to get fresh GPS in background
     getCurrentPosition().then(pos => {
@@ -1101,6 +1116,33 @@ async function initPassengerMap() {
     }).catch(console.warn);
 
     return passengerMap;
+}
+
+function startSelfTracking() {
+    if (locationWatchId) return;
+
+    console.log('📡 Starting Passenger High-Accuracy tracking...');
+    const userIcon = `<div class="user-location-marker"></div>`;
+
+    locationWatchId = watchPosition(pos => {
+        if (!pos) return;
+
+        // Only update if moved more than 2 meters to avoid "jitter"
+        let dist = 100;
+        if (currentPassengerLat && currentPassengerLng) {
+            dist = calculateDistance(pos.lat, pos.lng, currentPassengerLat, currentPassengerLng) * 1000;
+        }
+
+        if (dist > 2) {
+            currentPassengerLat = pos.lat;
+            currentPassengerLng = pos.lng;
+
+            if (passengerMap) {
+                // updateMarkerPosition will re-add if missing because we pass the icon
+                updateMarkerPosition(`passenger-${currentUser.id}`, pos.lat, pos.lng, userIcon);
+            }
+        }
+    });
 }
 
 // --- EXPLORATION MAP & TABS ---
@@ -1142,12 +1184,12 @@ window.switchTab = (tab) => {
     if (tab === 'home' && homeView) {
         homeView.style.display = 'block';
         if (navHome) navHome.classList.add('active');
-        checkActiveRide();
+        checkActiveRide(); // This will trigger initPassengerMap with 'passenger-map'
     } else if (tab === 'map' && mapView) {
         mapView.style.display = 'block';
         if (header) header.style.display = 'none';
         if (navMap) navMap.classList.add('active');
-        setTimeout(initExplorationMap, 100);
+        initExplorationMap();
     } else if (tab === 'history') {
         if (homeView) homeView.style.display = 'block';
         if (header) header.style.display = 'none';
@@ -1171,7 +1213,14 @@ async function initExplorationMap() {
 
     // 1. Init Map Instantly
     passengerMap = initMap('exploration-map', { lat, lng }, 16);
-    // Note: markers are cleared inside initMap now, so we start fresh
+
+    // Check for active ride to sync view
+    const activeRide = activeTrackingRide || await CommuterRides.fetchActiveRide(currentUser.id);
+    if (activeRide) {
+        console.log("📍 Syncing active ride to Exploration Map");
+        await setupRideMap(activeRide);
+        return; // Skip general exploration if in a ride
+    }
 
     // 2. Add "You" Marker Immediately (even if using default)
     const addYouMarker = (l, ln, acc = null) => {
