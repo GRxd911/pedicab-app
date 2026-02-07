@@ -800,7 +800,7 @@ window.saveEmergencyContact = async (e) => {
     const phone = document.getElementById('emergency-phone').value;
 
     if (!name || !phone) {
-        alert("Please fill in both name and number.");
+        await showAlert("Please fill in both name and number.", "error");
         return;
     }
 
@@ -808,10 +808,10 @@ window.saveEmergencyContact = async (e) => {
         btn.innerText = "Saving...";
         btn.disabled = true;
         await CommuterProfile.updateEmergencyContact(currentUser.id, name, phone);
-        alert("Emergency contact saved!");
+        await showAlert("Emergency contact saved!", "success");
         window.closeEmergencyContact();
     } catch (err) {
-        alert(err.message);
+        await showAlert(err.message, "error");
     } finally {
         btn.innerText = "Save Contact Details";
         btn.disabled = false;
