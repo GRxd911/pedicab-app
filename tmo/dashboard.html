@@ -79,6 +79,22 @@
             font-size: 20px;
         }
 
+        .nav-link {
+            position: relative;
+        }
+
+        .nav-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+            display: none;
+        }
+
         .logout-link {
             margin-top: auto;
             color: white;
@@ -348,8 +364,12 @@
             <li class="nav-item"><a href="#" class="nav-link active"><i class='bx bxs-dashboard'></i> Dashboard</a></li>
             <li class="nav-item"><a href="#" class="nav-link"><i class='bx bxs-car'></i> Drivers</a></li>
             <li class="nav-item"><a href="#" class="nav-link"><i class='bx bxs-user-detail'></i> Users</a></li>
-            <li class="nav-item"><a href="#" class="nav-link" style="color: #e11d48;"><i class='bx bxs-error-alt'></i>
-                    Emergencies</a></li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="emergencies-nav" style="color: #e11d48;">
+                    <i class='bx bxs-error-alt'></i> Emergencies
+                    <span id="emergency-dot" class="nav-dot"></span>
+                </a>
+            </li>
             <li class="nav-item"><a href="#" class="nav-link"><i class='bx bx-line-chart'></i> Analytics</a></li>
             <li class="nav-item"><a href="#" class="nav-link" id="broadcasting-nav"><i class='bx bx-broadcast'></i>
                     Broadcasting</a></li>

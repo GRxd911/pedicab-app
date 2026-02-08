@@ -176,6 +176,14 @@ async function loadDashboardData() {
         // Update Map
         updateTMOMap(stats.activeDrivers, activeEmergs);
 
+        // Update Notification Dot
+        const dot = document.getElementById('emergency-dot');
+        if (activeEmergs.length > 0) {
+            dot.style.display = 'block';
+        } else {
+            dot.style.display = 'none';
+        }
+
     } catch (err) {
         console.error('Error loading dashboard:', err);
     }
