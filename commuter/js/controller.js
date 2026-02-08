@@ -1377,7 +1377,7 @@ window.switchTab = (tab) => {
                 initTrackingMap(activeTrackingRide, d);
             }
         }, 100);
-    } else if (tab === 'activity' && mapView) { // Assuming 'activityView' was a typo and it should be 'mapView'
+    } else if (tab === 'map' && mapView) { // Assuming 'activityView' was a typo and it should be 'mapView'
         mapView.style.display = 'block';
         if (header) header.style.display = 'none';
         if (navMap) navMap.classList.add('active');
