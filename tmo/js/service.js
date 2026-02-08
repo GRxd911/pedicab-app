@@ -90,6 +90,15 @@ export async function verifyDriver(driverId, permit, zone, inspectionDate) {
         .eq('driver_id', driverId);
 
     if (error) throw error;
+
+    // Send a system alert (broadcast) informing the driver of their verification
+    // Since system_alerts is currently global, we'll label it clearly for the driver.
+    await supabaseClient.from('system_alerts').insert([{
+        title: 'Account Verified!',
+        message: 'Congratulations! Your driver account has been officially verified by the TMO. You can now start accepting rides and managing your profile.',
+        type: 'success'
+    }]);
+
     return true;
 }
 

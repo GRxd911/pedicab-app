@@ -390,6 +390,7 @@ async function loadBroadcastsHistory() {
     if (alerts.length > 0) {
         container.innerHTML = alerts.map(a => {
             let color = '#3b82f6';
+            if (a.type === 'success') color = '#10b981';
             if (a.type === 'warning') color = '#f59e0b';
             if (a.type === 'danger') color = '#ef4444';
             return `

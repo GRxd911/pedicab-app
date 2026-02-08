@@ -561,13 +561,37 @@ window.openNotifications = async () => {
         const alerts = await DriverService.getSystemAlerts();
 
         if (alerts.length > 0) {
-            container.innerHTML = alerts.map(a => `
-                <div style="background: ${a.type === 'broadcast' ? '#fff7ed' : '#f8fafc'}; padding: 15px; border-radius: 12px; border-left: 4px solid ${a.type === 'broadcast' ? '#f97316' : '#e2e8f0'};">
-                    <h4 style="font-size: 14px; color: ${a.type === 'broadcast' ? '#9a3412' : 'var(--text-main)'}; margin-bottom: 4px;">${a.title || 'System Message'}</h4>
-                    <p style="font-size: 12px; color: ${a.type === 'broadcast' ? '#7c2d12' : 'var(--text-muted)'}; line-height: 1.4;">${a.message}</p>
-                    <span style="font-size: 10px; opacity: 0.7; margin-top: 8px; display: block;">${new Date(a.created_at).toLocaleString()}</span>
-                </div>
-            `).join('');
+            container.innerHTML = alerts.map(a => {
+                let bgColor = '#f8fafc';
+                let borderColor = '#e2e8f0';
+                let textColor = 'var(--text-main)';
+                let subtitleColor = 'var(--text-muted)';
+
+                if (a.type === 'success') {
+                    bgColor = '#f0fdf4';
+                    borderColor = '#10b981';
+                    textColor = '#065f46';
+                    subtitleColor = '#065f46';
+                } else if (a.type === 'warning') {
+                    bgColor = '#fffbeb';
+                    borderColor = '#f59e0b';
+                    textColor = '#92400e';
+                    subtitleColor = '#92400e';
+                } else if (a.type === 'danger' || a.type === 'broadcast') {
+                    bgColor = '#fff1f2';
+                    borderColor = '#e11d48';
+                    textColor = '#9f1239';
+                    subtitleColor = '#9f1239';
+                }
+
+                return `
+                    <div style="background: ${bgColor}; padding: 15px; border-radius: 12px; border-left: 4px solid ${borderColor}; margin-bottom: 12px;">
+                        <h4 style="font-size: 14px; color: ${textColor}; margin-bottom: 4px;">${a.title || 'System Message'}</h4>
+                        <p style="font-size: 12px; color: ${subtitleColor}; line-height: 1.4;">${a.message}</p>
+                        <span style="font-size: 10px; opacity: 0.6; margin-top: 8px; display: block; color: ${subtitleColor};">${new Date(a.created_at).toLocaleString()}</span>
+                    </div>
+                `;
+            }).join('');
         } else {
             container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">No messages from TMO yet.</p>';
         }
