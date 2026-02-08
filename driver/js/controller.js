@@ -550,7 +550,7 @@ window.openChat = (rideId, name) => {
 async function loadChatMessages(rideId) {
     if (!rideId) return;
     try {
-        const msgs = await RideService.fetchMessages(rideId);
+        const msgs = await RideService.fetchChatMessages(rideId);
         const container = document.getElementById('chat-messages');
         if (!container) return;
 
@@ -576,7 +576,7 @@ window.sendChat = async () => {
     input.value = '';
 
     try {
-        await RideService.sendMessage(pendingAcceptRideId, currentUser.id, content);
+        await RideService.sendChatMessage(pendingAcceptRideId, currentUser.id, content);
         await loadChatMessages(pendingAcceptRideId);
     } catch (err) {
         console.error('Send error:', err);

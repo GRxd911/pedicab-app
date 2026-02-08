@@ -192,7 +192,15 @@ function setupListeners() {
                 const lat = parseFloat(d.current_lat);
                 const lng = parseFloat(d.current_lng);
                 if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                    updateMarkerPosition(`driver-${d.driver_id}`, lat, lng);
+                    const icon = `
+                        <div class="driver-marker-premium">
+                            <div class="marker-halo"></div>
+                            <div class="marker-core">
+                                <i class='bx bxs-car'></i>
+                            </div>
+                        </div>
+                    `;
+                    updateMarkerPosition(`driver-${d.driver_id}`, lat, lng, icon);
                 }
             } else if (d.status === 'offline') {
                 removeMarker(`driver-${d.driver_id}`);
