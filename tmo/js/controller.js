@@ -22,7 +22,7 @@ const views = {
 async function init() {
     const session = await TMOAuth.checkTMOSession();
     if (!session) {
-        window.location.href = 'tmo-signin.html';
+        window.location.href = 'signin.html';
         return;
     }
     currentUser = session.user;
@@ -108,6 +108,11 @@ async function switchView(viewName, linkElement) {
     if (targetView === 'dashboard') await loadDashboardData();
     if (targetView === 'emergencies') await loadEmergencies();
     if (targetView === 'broadcasting') await loadBroadcastsHistory();
+
+    // Fix map rendering if switching back to dashboard
+    if (targetView === 'dashboard' && tmoMap) {
+        setTimeout(() => tmoMap.invalidateSize(), 100);
+    }
 }
 
 // --- DATA LOADING ---
