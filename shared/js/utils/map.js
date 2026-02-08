@@ -36,7 +36,8 @@ export function initMap(containerId, center = { lat: 10.3157, lng: 123.8854 }, z
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
-        maxZoom: 20
+        maxZoom: 20,
+        crossOrigin: true
     }).addTo(map);
 
     // Add smooth marker transition CSS
