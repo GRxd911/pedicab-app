@@ -549,7 +549,6 @@ function stopTrackingDriver() {
     }
 
     if (locationWatchId) {
-        stopWatchingPosition(locationWatchId);
         locationWatchId = null;
     }
 
@@ -558,6 +557,10 @@ function stopTrackingDriver() {
 }
 
 function updatePendingUI(ride) {
+    // Hide static map container
+    const mapContainer = document.getElementById('tracking-map-container');
+    if (mapContainer) mapContainer.style.display = 'none';
+
     elements.bookingStatusContainer.innerHTML = `
         <div class="request-card" style="border: 2px solid var(--secondary); text-align: center;">
             <div class="loader" style="margin: 0 auto 15px;"></div>
@@ -578,7 +581,8 @@ function updatePendingUI(ride) {
 let trackingMap = null;
 
 function initTrackingMap(ride, driver) {
-    const container = document.getElementById('passenger-tracking-map');
+    // USE ORIGINAL STATIC CONTAINER
+    const container = document.getElementById('tracking-map');
     if (!container) return;
 
     // Prevent re-initialization if map already exists and context matches
@@ -593,7 +597,7 @@ function initTrackingMap(ride, driver) {
         const lat = ride.pickup_lat || 9.3068;
         const lng = ride.pickup_lng || 123.3033;
 
-        trackingMap = initMap('passenger-tracking-map', { lat, lng }, 15);
+        trackingMap = initMap('tracking-map', { lat, lng }, 15);
 
         // Add Route Markers
         if (ride.pickup_lat && ride.pickup_lng) {
@@ -669,24 +673,21 @@ function updateAcceptedUI(ride, driver) {
             </div>
         </div>
 
-        <!-- 2. Tracking Map Card -->
-        <div class="request-card" style="padding: 15px; border-radius: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="font-size: 11px; color: #0f172a; font-weight: 800; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;">
-                    <i class='bx bxs-map-pin' style="color: #ef4444;"></i> Live Tracking
-                </span>
-                <span style="font-size: 11px; font-weight: 700; color: #10b981;">${isAccepted ? 'Driver Assigned' : 'Heading to Destination'}</span>
-            </div>
-            
-            <div id="passenger-tracking-map" style="height: 200px; width: 100%; border-radius: 12px; z-index: 1;"></div>
-            
-            <div style="margin-top: 12px;">
-                 <div style="height: 6px; background: #f1f5f9; border-radius: 10px; overflow: hidden; position: relative;">
-                    <div style="width: ${progressPercent}%; height: 100%; background: #10b981; transition: width 1s ease-in-out;"></div>
-                </div>
+                <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 44px; height: 44px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; border-radius: 12px;"><i class='bx bxs-megaphone'></i></button>
             </div>
         </div>
     `;
+
+    // SHOW ORIGINAL MAP CONTAINER
+    const mapContainer = document.getElementById('tracking-map-container');
+    if (mapContainer) {
+        mapContainer.style.display = 'block';
+        // Update static info
+        const distEl = document.getElementById('tracking-distance');
+        const etaEl = document.getElementById('tracking-eta');
+        if (distEl) distEl.innerText = ride.distance ? `${ride.distance.toFixed(2)} km` : '--';
+        if (etaEl) etaEl.innerText = ride.duration ? `${Math.ceil(ride.duration / 60)} mins` : '--';
+    }
 
     setTimeout(() => {
         initTrackingMap(ride, driver);
@@ -696,6 +697,11 @@ function updateAcceptedUI(ride, driver) {
 function showCompletionUI(ride) {
     elements.bookingStatusContainer.style.display = 'block';
     elements.requestFormContainer.style.display = 'none';
+
+    // Hide static map container
+    const mapContainer = document.getElementById('tracking-map-container');
+    if (mapContainer) mapContainer.style.display = 'none';
+
     elements.bookingStatusContainer.innerHTML = `
         <div class="request-card" style="border: 2px solid #10b981; text-align: center; background: white; box-shadow: 0 20px 40px rgba(0,0,0,0.1); animation: slideUp 0.5s ease-out;">
             <div style="width: 80px; height: 80px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
