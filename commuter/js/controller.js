@@ -179,6 +179,27 @@ function setupListeners() {
         })
         .subscribe();
 
+    // LIVE DRIVER TRACKING FOR PASSENGERS
+    supabaseClient
+        .channel('live-drivers')
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            table: 'drivers'
+        }, payload => {
+            const d = payload.new;
+            if (d.status === 'online' && d.current_lat && d.current_lng) {
+                // If on exploration or tracking map, update the icon position
+                const lat = parseFloat(d.current_lat);
+                const lng = parseFloat(d.current_lng);
+                if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                    updateMarkerPosition(`driver-${d.driver_id}`, lat, lng);
+                }
+            } else if (d.status === 'offline') {
+                removeMarker(`driver-${d.driver_id}`);
+            }
+        })
+        .subscribe();
+
     // Autocomplete for Pick-up and Drop-off
     setupAutocomplete(elements.pickupInput, elements.pickupSuggestions, 'pickup');
     setupAutocomplete(elements.dropoffInput, elements.dropoffSuggestions, 'dropoff');
@@ -718,12 +739,24 @@ window.openChat = (rideId, driverName) => {
     document.getElementById('chat-driver-name').innerText = driverName || 'Driver';
     elements.chatOverlay.style.display = 'flex';
     loadChatMessages();
-    chatInterval = setInterval(loadChatMessages, 3000);
+
+    // Switch to Real-time Chat
+    if (window.chatChannel) window.chatChannel.unsubscribe();
+    window.chatChannel = supabaseClient
+        .channel(`chat-${rideId}`)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            table: 'messages',
+            filter: `ride_id=eq.${rideId}`
+        }, () => {
+            loadChatMessages();
+        })
+        .subscribe();
 };
 
 window.closeChat = () => {
     elements.chatOverlay.style.display = 'none';
-    if (chatInterval) clearInterval(chatInterval);
+    if (window.chatChannel) window.chatChannel.unsubscribe();
     chatRideId = null;
 };
 
@@ -1267,9 +1300,11 @@ async function initExplorationMap() {
     try {
         const drivers = await CommuterRides.fetchAvailableDrivers();
         drivers.forEach(d => {
-            if (d.current_lat && d.current_lng) {
+            const lat = parseFloat(d.current_lat);
+            const lng = parseFloat(d.current_lng);
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
                 const dUser = Array.isArray(d.users) ? d.users[0] : d.users;
-                addDriverMarker(d.driver_id, d.current_lat, d.current_lng, dUser?.fullname || 'Driver');
+                addDriverMarker(d.driver_id, lat, lng, dUser?.fullname || 'Driver');
             }
         });
     } catch (e) {

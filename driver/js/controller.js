@@ -528,13 +528,66 @@ window.openChat = (rideId, name) => {
     const overlay = document.getElementById('chatOverlay');
     if (overlay) {
         overlay.style.display = 'flex';
-        document.getElementById('chat-passenger-name').innerText = name;
-        // Simple chat logic can go here or in separate file
+        document.getElementById('chat-passenger-name').innerText = name || 'Passenger';
+        pendingAcceptRideId = rideId; // Set current context
+        loadChatMessages(rideId);
+
+        // Upgrade to Real-time Chat
+        if (window.chatChannel) window.chatChannel.unsubscribe();
+        window.chatChannel = supabaseClient
+            .channel(`chat-${rideId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                table: 'messages',
+                filter: `ride_id=eq.${rideId}`
+            }, () => {
+                loadChatMessages(rideId);
+            })
+            .subscribe();
+    }
+};
+
+async function loadChatMessages(rideId) {
+    if (!rideId) return;
+    try {
+        const msgs = await RideService.fetchMessages(rideId);
+        const container = document.getElementById('chat-messages');
+        if (!container) return;
+
+        container.innerHTML = msgs.map(m => {
+            const isMine = m.sender_id === currentUser.id;
+            const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="chat-bubble ${isMine ? 'mine' : 'theirs'}">
+                    ${m.content}
+                    <div class="chat-time" style="color: ${isMine ? 'rgba(255,255,255,0.8)' : '#94a3b8'}">${time}</div>
+                </div>
+            `;
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+    } catch (err) { console.error('Chat load error:', err); }
+}
+
+window.sendChat = async () => {
+    const input = document.getElementById('chat-input');
+    if (!input || !input.value.trim() || !pendingAcceptRideId) return;
+
+    const content = input.value.trim();
+    input.value = '';
+
+    try {
+        await RideService.sendMessage(pendingAcceptRideId, currentUser.id, content);
+        await loadChatMessages(pendingAcceptRideId);
+    } catch (err) {
+        console.error('Send error:', err);
+        input.value = content;
+        showAlert('Failed to send message', 'error');
     }
 };
 
 window.closeChat = () => {
     document.getElementById('chatOverlay').style.display = 'none';
+    if (window.chatChannel) window.chatChannel.unsubscribe();
 };
 
 window.openNotifications = async () => {

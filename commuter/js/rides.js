@@ -96,7 +96,7 @@ export async function fetchAvailableDrivers() {
             users (fullname, avatar_url)
         `)
         .eq('status', 'online')
-        .eq('verification_status', 'verified');
+        .in('verification_status', ['verified', 'pending']);
 
     if (error) throw error;
     return drivers;
