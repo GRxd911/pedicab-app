@@ -642,50 +642,49 @@ function updateAcceptedUI(ride, driver) {
     const progressPercent = isAccepted ? 30 : 75;
 
     elements.bookingStatusContainer.innerHTML = `
-        <div class="request-card" style="border: 2px solid #10b981; padding: 20px; border-radius: 20px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+        <!-- 1. Driver Info Card -->
+        <div class="request-card" style="border: 2px solid #10b981; padding: 15px; border-radius: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                <div class="driver-avatar" style="width: 55px; height: 55px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #f0fdf4; overflow: hidden;">
+                <div class="driver-avatar" style="width: 50px; height: 50px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #f0fdf4; overflow: hidden;">
                     ${driver?.avatar_url
             ? `<img src="${driver.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`
-            : `<i class='bx bxs-user' style="font-size: 30px; color: #10b981;"></i>`
+            : `<i class='bx bxs-user' style="font-size: 24px; color: #10b981;"></i>`
         }
                 </div>
                 <div style="flex: 1;">
-                    <h3 style="margin: 0; font-size: 16px; color: var(--text-main);">${driver?.fullname || 'Driver'}</h3>
+                    <h3 style="margin: 0; font-size: 15px; color: var(--text-main);">${driver?.fullname || 'Driver'}</h3>
                     <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px;">
-                        <span style="background: #10b981; color: white; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">PLATE: ${driver?.pedicab_plate || 'N/A'}</span>
+                        <span style="background: #10b981; color: white; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">${driver?.pedicab_plate || 'N/A'}</span>
                         <span style="background: #e2e8f0; color: #475569; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">${driver?.registration_group || 'Verified'}</span>
                     </div>
                 </div>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-size: 11px; color: #059669; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
-                        ${isAccepted ? 'Driver Assigned' : 'Heading to Destination'}
-                    </span>
-                    <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">${progressPercent}%</span>
-                </div>
-                <div style="height: 10px; background: #f1f5f9; border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #e2e8f0;">
-                    <div style="width: ${progressPercent}%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); transition: width 1s ease-in-out; position: relative;">
-                        <div style="position: absolute; right: 0; top: 0; height: 100%; width: 20px; background: rgba(255,255,255,0.3); transform: skewX(-20deg);"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- LIVE TRACKING MAP CONTAINER -->
-            <div id="passenger-tracking-map" style="height: 250px; width: 100%; border-radius: 15px; margin-top: 20px; z-index: 1;"></div>
-            
-            <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button onclick="window.openChat(${ride.ride_id}, '${driver?.fullname || 'Driver'}')" class="btn" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 13px; height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px;">
+                <button onclick="window.openChat(${ride.ride_id}, '${driver?.fullname || 'Driver'}')" class="btn" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 13px; height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px;">
                     <i class='bx bxs-chat'></i> Chat
                 </button>
-                ${driver?.phone ? `<a href="tel:${driver.phone}" class="btn" style="width: 55px; height: 48px; background: #10b981; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 600; color: white;"><i class='bx bxs-phone'></i></a>` : ''}
-                <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 55px; height: 48px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class='bx bxs-megaphone'></i></button>
+                ${driver?.phone ? `<a href="tel:${driver.phone}" class="btn" style="width: 44px; height: 44px; background: #10b981; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 12px; color: white;"><i class='bx bxs-phone'></i></a>` : ''}
+                <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 44px; height: 44px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; border-radius: 12px;"><i class='bx bxs-megaphone'></i></button>
             </div>
-            <p style="text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 15px; border-top: 1px solid #f1f5f9; padding-top: 10px;">
-                <i class='bx bxs-map' style="color: #ef4444;"></i> Going to: <strong>${ride.dropoff_location}</strong>
-            </p>
+        </div>
+
+        <!-- 2. Tracking Map Card -->
+        <div class="request-card" style="padding: 15px; border-radius: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #0f172a; font-weight: 800; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;">
+                    <i class='bx bxs-map-pin' style="color: #ef4444;"></i> Live Tracking
+                </span>
+                <span style="font-size: 11px; font-weight: 700; color: #10b981;">${isAccepted ? 'Driver Assigned' : 'Heading to Destination'}</span>
+            </div>
+            
+            <div id="passenger-tracking-map" style="height: 200px; width: 100%; border-radius: 12px; z-index: 1;"></div>
+            
+            <div style="margin-top: 12px;">
+                 <div style="height: 6px; background: #f1f5f9; border-radius: 10px; overflow: hidden; position: relative;">
+                    <div style="width: ${progressPercent}%; height: 100%; background: #10b981; transition: width 1s ease-in-out;"></div>
+                </div>
+            </div>
         </div>
     `;
 }
