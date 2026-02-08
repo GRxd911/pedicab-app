@@ -200,10 +200,17 @@ function setupListeners() {
                             </div>
                         </div>
                     `;
+                    // Update main map
                     updateMarkerPosition(`driver-${d.driver_id}`, lat, lng, icon);
+
+                    // Update Tracking Map (Mini-map in card) if active
+                    if (trackingMap && activeTrackingRide && activeTrackingRide.driver_id === d.driver_id) {
+                        updateMarkerPosition(`track-driver-${d.driver_id}`, lat, lng, icon);
+                    }
                 }
             } else if (d.status === 'offline') {
                 removeMarker(`driver-${d.driver_id}`);
+                if (trackingMap) removeMarker(`track-driver-${d.driver_id}`);
             }
         })
         .subscribe();
@@ -567,6 +574,69 @@ function updatePendingUI(ride) {
     `;
 }
 
+// Global reference for the tracking map instance
+let trackingMap = null;
+
+function initTrackingMap(ride, driver) {
+    const container = document.getElementById('passenger-tracking-map');
+    if (!container) return;
+
+    // Prevent re-initialization if map already exists and context matches
+    if (trackingMap) {
+        trackingMap.remove();
+        trackingMap = null;
+    }
+
+    try {
+        console.log("📍 Initializing Passenger Tracking Map...");
+        // Default center (will be overridden by fitBounds)
+        const lat = ride.pickup_lat || 9.3068;
+        const lng = ride.pickup_lng || 123.3033;
+
+        trackingMap = initMap('passenger-tracking-map', { lat, lng }, 15);
+
+        // Add Route Markers
+        if (ride.pickup_lat && ride.pickup_lng) {
+            addPassengerMarker('pickup', ride.pickup_lat, ride.pickup_lng, 'Pickup');
+        }
+        if (ride.dropoff_lat && ride.dropoff_lng) {
+            addDestinationMarker(ride.dropoff_lat, ride.dropoff_lng, 'Destination');
+        }
+
+        // Add Driver Marker if available
+        if (driver && driver.current_lat && driver.current_lng) {
+            const dLat = parseFloat(driver.current_lat);
+            const dLng = parseFloat(driver.current_lng);
+            if (!isNaN(dLat) && !isNaN(dLng) && dLat !== 0 && dLng !== 0) {
+                const icon = `
+                    <div class="driver-marker-premium">
+                        <div class="marker-halo"></div>
+                        <div class="marker-core">
+                            <i class='bx bxs-car'></i>
+                        </div>
+                    </div>
+                `;
+                // Use a unique ID for the tracking map driver marker to avoid conflicts
+                addMarker(`track-driver-${driver.driver_id}`, dLat, dLng, { icon: icon });
+            }
+        }
+
+        // Draw Route
+        const points = [];
+        if (driver && driver.current_lat) points.push({ lat: driver.current_lat, lng: driver.current_lng });
+        if (ride.pickup_lat) points.push({ lat: ride.pickup_lat, lng: ride.pickup_lng });
+        if (ride.dropoff_lat) points.push({ lat: ride.dropoff_lat, lng: ride.dropoff_lng });
+
+        if (points.length >= 2) {
+            drawMultiPointRoute(points);
+            fitBounds();
+        }
+
+    } catch (e) {
+        console.warn("Tracking map init failed:", e);
+    }
+}
+
 function updateAcceptedUI(ride, driver) {
     const isAccepted = ride.status === 'accepted';
     const progressPercent = isAccepted ? 30 : 75;
@@ -603,8 +673,13 @@ function updateAcceptedUI(ride, driver) {
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px;">
-                <button onclick="window.openChat(${ride.ride_id}, '${driver?.fullname || 'Driver'}')" class="btn" style="flex: 1; height: 48px; background: #e0f2fe; color: #0284c7; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600;"><i class='bx bxs-chat'></i> Chat</button>
+            <!-- LIVE TRACKING MAP CONTAINER -->
+            <div id="passenger-tracking-map" style="height: 250px; width: 100%; border-radius: 15px; margin-top: 20px; z-index: 1;"></div>
+            
+            <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button onclick="window.openChat(${ride.ride_id}, '${driver?.fullname || 'Driver'}')" class="btn" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 13px; height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class='bx bxs-chat'></i> Chat
+                </button>
                 ${driver?.phone ? `<a href="tel:${driver.phone}" class="btn" style="width: 55px; height: 48px; background: #10b981; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 600; color: white;"><i class='bx bxs-phone'></i></a>` : ''}
                 <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 55px; height: 48px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class='bx bxs-megaphone'></i></button>
             </div>
