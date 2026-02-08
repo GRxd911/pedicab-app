@@ -2,13 +2,13 @@
     "name": "Pedicab Support System",
     "short_name": "Pedicab",
     "description": "Premium Pedicab Booking and Support System",
-    "start_url": "/signin.html",
+    "start_url": "commuter/signin.html",
     "display": "standalone",
     "background_color": "#f4f7fe",
     "theme_color": "#4f46e5",
     "icons": [
         {
-            "src": "assets/logo.png",
+            "src": "shared/assets/images/logo.png",
             "sizes": "512x512",
             "type": "image/png"
         }

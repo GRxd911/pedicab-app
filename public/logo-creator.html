@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Logo Creator - Pedicab Support</title>
+    <style>
+        body {
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 32px;
+            text-align: center;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+        }
+
+        .canvas-container {
+            border-radius: 60px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            line-height: 0;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>Logo Content Creator</h1>
+        <p>This tool generates the "Natural & Minimal" glass logo file for you.</p>
+
+        <div class="canvas-container">
+            <canvas id="logoCanvas" width="512" height="512"></canvas>
+        </div>
+
+        <button id="downloadBtn">Download logo.png</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('logoCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawLogo() {
+            // 1. Background Gradient
+            const bgGrad = ctx.createLinearGradient(0, 0, 512, 512);
+            bgGrad.addColorStop(0, '#1E1B4B');
+            bgGrad.addColorStop(1, '#4F46E5');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 2. Glass Card
+            ctx.save();
+            ctx.translate(64, 64);
+            const cardWidth = 384;
+            const cardHeight = 384;
+            const radius = 90;
+
+            // Simple Shadow
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 40;
+            ctx.shadowOffsetY = 20;
+
+            // Draw Rounded Rect
+            ctx.beginPath();
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(cardWidth - radius, 0);
+            ctx.quadraticCurveTo(cardWidth, 0, cardWidth, radius);
+            ctx.lineTo(cardWidth, cardHeight - radius);
+            ctx.quadraticCurveTo(cardWidth, cardHeight, cardWidth - radius, cardHeight);
+            ctx.lineTo(radius, cardHeight);
+            ctx.quadraticCurveTo(0, cardHeight, 0, cardHeight - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+
+            // Glass Fill
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fill();
+
+            // Glass Border (Shine)
+            const shineGrad = ctx.createLinearGradient(0, 0, cardWidth, cardHeight);
+            shineGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
+            shineGrad.addColorStop(1, 'rgba(255,255,255,0.05)');
+            ctx.strokeStyle = shineGrad;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+
+            // 3. Pedicab Icon (Minimal)
+            ctx.save();
+            ctx.translate(256, 256);
+            ctx.strokeStyle = 'white';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Shadow for Icon
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetY = 8;
+
+            // Wheels
+            ctx.lineWidth = 14;
+            ctx.beginPath(); ctx.arc(-70, 60, 32, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(70, 60, 32, 0, Math.PI * 2); ctx.stroke();
+
+            // Body
+            ctx.lineWidth = 18;
+            ctx.beginPath();
+            ctx.moveTo(-100, 60);
+            ctx.quadraticCurveTo(-90, -10, 0, -10);
+            ctx.quadraticCurveTo(90, -10, 100, 60);
+            ctx.stroke();
+
+            // Canopy
+            ctx.lineWidth = 16;
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(0, -70);
+            ctx.moveTo(-40, -50);
+            ctx.lineTo(40, -50);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // 4. Glint Glow
+            const glow = ctx.createRadialGradient(100, 100, 0, 100, 100, 150);
+            glow.addColorStop(0, 'rgba(255,255,255,0.1)');
+            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, 512, 512);
+        }
+
+        drawLogo();
+
+        document.getElementById('downloadBtn').onclick = () => {
+            const link = document.createElement('a');
+            link.download = 'logo.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+    </script>
+</body>
+
+</html>

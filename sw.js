@@ -1,12 +1,12 @@
 const CACHE_NAME = 'pedicab-v1';
 const ASSETS = [
     '/',
-    '/signin.html',
-    '/signup.html',
-    '/commuter-app.html',
-    '/driver-app.html',
-    '/css/style.css',
-    '/js/supabase-config.js',
+    '/commuter/signin.html',
+    '/commuter/signup.html',
+    '/commuter/app.html',
+    '/driver/app.html',
+    '/shared/css/style.css',
+    '/shared/js/config/supabase-config.js',
     '/manifest.json'
 ];
 

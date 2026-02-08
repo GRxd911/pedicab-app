@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMO Account Creator</title>
+    <link rel="stylesheet" href="../shared/css/style.css">
+    <style>
+        body {
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: sans-serif;
+        }
+
+        .setup-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .setup-card h1 {
+            color: #2D3192;
+            margin-bottom: 20px;
+        }
+
+        .setup-card p {
+            color: #64748b;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="setup-card">
+        <h1>TMO Setup</h1>
+        <p>Enter the credentials for the new TMO Admin account.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            <input type="email" id="tmoEmail" placeholder="email@example.com" class="form-input"
+                value="tmo-admin@gmail.com">
+            <input type="text" id="tmoPass" placeholder="Password" class="form-input" value="admin1234">
+        </div>
+        <button id="createBtn" class="btn" style="background: #2D3192; color: white; width: 100%;">Create TMO
+            Account</button>
+        <div id="status" style="margin-top: 20px; font-weight: 600; font-size: 14px;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../shared/js/config/supabase-config.js"></script>
+    <script>
+        document.getElementById('createBtn').addEventListener('click', async () => {
+            const status = document.getElementById('status');
+            const email = document.getElementById('tmoEmail').value;
+            const password = document.getElementById('tmoPass').value;
+
+            status.innerText = "Attempting to create...";
+            status.style.color = "blue";
+
+            // 1. Create the account properly via the auth system
+            const { data, error } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        full_name: "TMO Administrator",
+                        role: "tmo"
+                    }
+                }
+            });
+
+            if (error) {
+                console.error("DEBUG AUTH ERROR:", error);
+                status.innerText = "Auth Error: " + error.message;
+                status.style.color = "red";
+                return;
+            }
+
+            const user = data.user;
+            if (user) {
+                // 2. Add to public users table
+                const { error: dbError } = await supabaseClient
+                    .from('users')
+                    .upsert([
+                        { id: user.id, fullname: "TMO Administrator", email: email, role: "tmo" }
+                    ]);
+
+                if (dbError) {
+                    console.error("DEBUG DB ERROR:", dbError);
+                    status.innerText = "Auth succeeded, but DB listing failed: " + dbError.message;
+                    status.style.color = "orange";
+                    return;
+                }
+
+                status.innerText = "Success! Account Created.";
+                status.style.color = "green";
+                alert("TMO Account Created!\nEmail: " + email + "\nPassword: " + password);
+            }
+        });
+    </script>
+</body>
+
+</html>
