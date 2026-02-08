@@ -544,6 +544,16 @@ window.openNotifications = async () => {
     const container = document.getElementById('notif-list');
     if (!container) return;
 
+    try {
+        // Refresh verification status locally to ensure immediate access after TMO approval
+        const latestProfile = await DriverService.getDriverProfile(currentUser.id);
+        if (latestProfile) {
+            verificationStatus = latestProfile.verification_status || 'pending';
+        }
+    } catch (e) {
+        console.warn('Could not refresh verification status:', e);
+    }
+
     if (verificationStatus !== 'verified') {
         container.innerHTML = `
             <div style="text-align: center; padding: 40px 20px;">

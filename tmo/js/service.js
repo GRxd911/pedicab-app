@@ -78,7 +78,7 @@ export async function getUsers() {
     return data;
 }
 
-export async function verifyDriver(driverId, permit, zone, inspectionDate) {
+export async function verifyDriver(driverId, permit, zone, inspectionDate, tmoId) {
     const { error } = await supabaseClient
         .from('drivers')
         .update({
@@ -92,8 +92,8 @@ export async function verifyDriver(driverId, permit, zone, inspectionDate) {
     if (error) throw error;
 
     // Send a system alert (broadcast) informing the driver of their verification
-    // Since system_alerts is currently global, we'll label it clearly for the driver.
     await supabaseClient.from('system_alerts').insert([{
+        tmo_id: tmoId,
         title: 'Account Verified!',
         message: 'Congratulations! Your driver account has been officially verified by the TMO. You can now start accepting rides and managing your profile.',
         type: 'success'
@@ -102,10 +102,11 @@ export async function verifyDriver(driverId, permit, zone, inspectionDate) {
     return true;
 }
 
-export async function sendBroadcast(title, message, type) {
+export async function sendBroadcast(title, message, type, tmoId) {
     const { error } = await supabaseClient
         .from('system_alerts')
         .insert([{
+            tmo_id: tmoId,
             title: title,
             message: message,
             type: type // 'info', 'warning', 'danger'

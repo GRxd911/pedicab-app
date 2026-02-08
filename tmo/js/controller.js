@@ -503,7 +503,7 @@ window.saveVerification = async () => {
     const inspection = document.getElementById('modal-inspection').value;
 
     try {
-        await TMODashboard.verifyDriver(id, permit, zone, inspection);
+        await TMODashboard.verifyDriver(id, permit, zone, inspection, currentUser.id);
         await showAlert('Driver Verified', 'The driver has been successfully verified and added to the official database.', 'success');
         window.closeVerifyModal();
         await loadDrivers();
@@ -519,7 +519,7 @@ window.sendBroadcast = async () => {
     const type = document.getElementById('broadcast-type').value;
 
     try {
-        await TMODashboard.sendBroadcast(title, message, type);
+        await TMODashboard.sendBroadcast(title, message, type, currentUser.id);
         await showAlert('Broadcast Sent', 'Your alert has been broadcasted to all active drivers in the city.', 'success');
         document.getElementById('broadcast-title').value = '';
         document.getElementById('broadcast-message').value = '';
