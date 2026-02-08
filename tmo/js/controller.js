@@ -87,6 +87,51 @@ function showAlert(title, message, type = 'error') {
     });
 }
 
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 24px;
+        `;
+
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: white; width: 100%; max-width: 320px; border-radius: 28px;
+            padding: 32px 24px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        `;
+
+        card.innerHTML = `
+            <div style="width: 56px; height: 56px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <i class='bx bx-question-mark' style="font-size: 28px; color: #64748b;"></i>
+            </div>
+            <p style="font-size: 16px; font-weight: 600; color: #1e293b; line-height: 1.5; margin-bottom: 28px; font-family: sans-serif;">${message}</p>
+            <div style="display: flex; gap: 12px;">
+                <button id="confirm-cancel" style="flex: 1; height: 48px; background: #f1f5f9; color: #64748b; border: none; border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer;">Cancel</button>
+                <button id="confirm-ok" style="flex: 1; height: 48px; background: #2D3192; color: white; border: none; border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer;">Confirm</button>
+            </div>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        const cleanup = (val) => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.2s ease';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(val);
+            }, 200);
+        };
+
+        card.querySelector('#confirm-cancel').onclick = () => cleanup(false);
+        card.querySelector('#confirm-ok').onclick = () => cleanup(true);
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+    });
+}
+
 // --- INITIALIZATION ---
 async function init() {
     const session = await TMOAuth.checkTMOSession();
@@ -484,7 +529,7 @@ window.sendBroadcast = async () => {
 };
 
 window.deleteBroadcast = async (id) => {
-    if (!confirm('Are you sure you want to delete this alert? Drivers will no longer see it.')) return;
+    if (!await showConfirm('Are you sure you want to delete this alert? Drivers will no longer see it.')) return;
     try {
         await TMODashboard.deleteBroadcast(id);
         await loadBroadcastsHistory();
@@ -504,7 +549,7 @@ window.markResolved = async (id) => {
 };
 
 window.deleteEmergency = async (id) => {
-    if (!confirm('Permanently delete this log?')) return;
+    if (!await showConfirm('Permanently delete this log?')) return;
     try {
         const { error } = await supabaseClient.from('emergencies').delete().eq('id', id);
         if (error) throw error;
@@ -516,7 +561,7 @@ window.deleteEmergency = async (id) => {
 };
 
 window.deleteAllResolvedEmergencies = async () => {
-    if (!confirm('Clear all resolved logs?')) return;
+    if (!await showConfirm('Clear all resolved logs?')) return;
     try {
         await TMOEmergencies.clearAllResolved();
         await loadEmergencies();

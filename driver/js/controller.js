@@ -127,8 +127,6 @@ async function init() {
 
     } catch (err) {
         console.error('CRITICAL INIT ERROR:', err);
-        // Alert the user so they can see if it's a specific JS error
-        // alert('Initialization Error: ' + err.message);
     }
 
     // Refresh active time every minute
@@ -436,7 +434,7 @@ window.toggleStatus = async () => {
     const newStatus = isGoingOffline ? 'offline' : 'online';
 
     if (!isGoingOffline && verificationStatus !== 'verified') {
-        alert('Your account is not yet verified. Please wait for TMO approval.');
+        await showAlert('Your account is not yet verified. Please wait for TMO approval.', 'error');
         return;
     }
 
@@ -454,7 +452,7 @@ window.toggleStatus = async () => {
             checkContextAndLoad();
         }
     } catch (e) {
-        alert('Failed to update status: ' + e.message);
+        await showAlert('Failed to update status: ' + e.message, 'error');
         updateStatusUI(currentStatus);
     }
 };
@@ -462,10 +460,10 @@ window.toggleStatus = async () => {
 window.acceptRide = async (rideId, pickup, dropoff) => {
     try {
         await RideService.acceptRide(rideId, currentUser.id);
-        alert('Ride Accepted!');
+        await showAlert('Ride Accepted!', 'success');
         checkContextAndLoad();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Error: ' + e.message, 'error');
     }
 };
 
@@ -507,14 +505,14 @@ window.setFareField = (amount) => {
 
 window.submitFare = async () => {
     const val = document.getElementById('custom-fare').value;
-    if (!val || val <= 0) return alert('Enter a valid amount');
+    if (!val || val <= 0) return await showAlert('Please enter a valid amount', 'info');
 
     try {
         document.getElementById('confirm-fare-btn').innerText = 'Processing...';
         await RideService.completeTrip(pendingAcceptRideId, val);
         location.reload();
     } catch (e) {
-        alert('Failed: ' + e.message);
+        await showAlert('Failed to complete trip: ' + e.message, 'error');
         document.getElementById('confirm-fare-btn').innerText = 'Complete Trip';
     }
 };
@@ -602,7 +600,7 @@ window.saveProfile = async () => {
     const color = document.getElementById('edit-color').value;
     const avatarFile = document.getElementById('avatar-upload').files[0];
 
-    if (!name) return alert('Name is required');
+    if (!name) return await showAlert('Name is required', 'error');
 
     const btn = document.getElementById('save-profile-btn');
     btn.innerText = 'Saving...';
