@@ -546,6 +546,18 @@ window.openNotifications = async () => {
     const container = document.getElementById('notif-list');
     if (!container) return;
 
+    if (verificationStatus !== 'verified') {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px;">
+                <div style="width: 64px; height: 64px; background: #fffbeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i class='bx bxs-lock-alt' style="font-size: 32px; color: #f59e0b;"></i>
+                </div>
+                <h4 style="font-size: 16px; color: #1e293b; margin-bottom: 8px;">Access Restricted</h4>
+                <p style="font-size: 13px; color: #64748b; line-height: 1.5;">Official TMO broadcasts are only available for verified driver partners. Please wait for your account approval.</p>
+            </div>`;
+        return;
+    }
+
     try {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">Loading messages...</p>';
         const alerts = await DriverService.getSystemAlerts();
@@ -729,8 +741,11 @@ function setupStatusListener() {
 function setupAlertListener() {
     supabaseClient.channel('system-alerts')
         .on('postgres_changes', { event: 'INSERT', table: 'system_alerts' }, payload => {
-            playAlertSound();
-            document.getElementById('notif-dot').style.display = 'block';
+            // Only show alert if driver is verified
+            if (verificationStatus === 'verified') {
+                playAlertSound();
+                document.getElementById('notif-dot').style.display = 'block';
+            }
         }).subscribe();
 }
 
