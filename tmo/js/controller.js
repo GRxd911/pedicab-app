@@ -161,7 +161,7 @@ async function init() {
 }
 
 // --- MAP INTEGRATION ---
-import { initMap, addDriverMarker, addPassengerMarker, addSOSMarker, addDestinationMarker, clearAllMarkers, updateMarkerPosition, removeMarker } from '../../shared/js/utils/map.js';
+import { initMap, addDriverMarker, addPassengerMarker, addSOSMarker, addDestinationMarker, clearAllMarkers, updateMarkerPosition, removeMarker, fitBounds } from '../../shared/js/utils/map.js';
 
 let tmoMap = null;
 let driverMarkers = {};
@@ -188,7 +188,7 @@ function updateTMOMap(activeDrivers, emergencies) {
         const lat = parseFloat(d.current_lat);
         const lng = parseFloat(d.current_lng);
 
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
             const name = (Array.isArray(d.users) ? d.users[0] : d.users)?.fullname || 'Driver';
             const label = `${name} (#${d.pedicab_plate})`;
             addDriverMarker(d.driver_id, lat, lng, label);
@@ -204,7 +204,7 @@ function updateTMOMap(activeDrivers, emergencies) {
         const lat = parseFloat(e.location_lat);
         const lng = parseFloat(e.location_lng);
 
-        if (!isNaN(lat) && !isNaN(lng) && e.status === 'active') {
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 && e.status === 'active') {
             const name = e.passenger?.fullname || 'Emergency';
             addSOSMarker(e.id, lat, lng, name);
 
@@ -229,6 +229,11 @@ function updateTMOMap(activeDrivers, emergencies) {
             delete sosMarkers[id];
         }
     });
+
+    // Auto-center map to show all active entities
+    if (currentDriverIds.size > 0 || currentSOSIds.size > 0) {
+        fitBounds();
+    }
 }
 async function switchView(viewName, linkElement) {
     // Map view names if they differ
