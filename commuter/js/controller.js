@@ -202,9 +202,15 @@ function setupListeners() {
                     `;
                     // Update main map
                     updateMarkerPosition(`driver-${d.driver_id}`, lat, lng, icon);
+
+                    // Update Tracking Map (Mini-map in card) if active
+                    if (trackingMap && activeTrackingRide && activeTrackingRide.driver_id === d.driver_id) {
+                        updateMarkerPosition(`track-driver-${d.driver_id}`, lat, lng, icon);
+                    }
                 }
             } else if (d.status === 'offline') {
                 removeMarker(`driver-${d.driver_id}`);
+                if (trackingMap) removeMarker(`track-driver-${d.driver_id}`);
             }
         })
         .subscribe();
@@ -571,15 +577,85 @@ function updatePendingUI(ride) {
 // Global reference for the tracking map instance
 let trackingMap = null;
 
-// function initTrackingMap(ride, driver) {} // Function removed
+function initTrackingMap(ride, driver) {
+    const container = document.getElementById('passenger-tracking-map');
+    if (!container) return;
+
+    // Prevent re-initialization if map already exists and context matches
+    if (trackingMap) {
+        trackingMap.remove();
+        trackingMap = null;
+    }
+
+    try {
+        console.log("📍 Initializing Passenger Tracking Map...");
+        // Default center (will be overridden by fitBounds)
+        const lat = ride.pickup_lat || 9.3068;
+        const lng = ride.pickup_lng || 123.3033;
+
+        trackingMap = initMap('passenger-tracking-map', { lat, lng }, 15);
+
+        // Add Route Markers
+        if (ride.pickup_lat && ride.pickup_lng) {
+            addPassengerMarker('pickup', ride.pickup_lat, ride.pickup_lng, 'Pickup');
+        }
+        if (ride.dropoff_lat && ride.dropoff_lng) {
+            addDestinationMarker(ride.dropoff_lat, ride.dropoff_lng, 'Destination');
+        }
+
+        // Add Driver Marker if available
+        if (driver && driver.current_lat && driver.current_lng) {
+            const dLat = parseFloat(driver.current_lat);
+            const dLng = parseFloat(driver.current_lng);
+            if (!isNaN(dLat) && !isNaN(dLng) && dLat !== 0 && dLng !== 0) {
+                const icon = `
+                    <div class="driver-marker-premium">
+                        <div class="marker-halo"></div>
+                        <div class="marker-core">
+                            <i class='bx bxs-car'></i>
+                        </div>
+                    </div>
+                `;
+                // Use a unique ID for the tracking map driver marker to avoid conflicts
+                addMarker(`track-driver-${driver.driver_id}`, dLat, dLng, { icon: icon });
+            }
+        }
+
+        // Draw Route
+        const points = [];
+        if (driver && driver.current_lat) points.push({ lat: driver.current_lat, lng: driver.current_lng });
+        if (ride.pickup_lat) points.push({ lat: ride.pickup_lat, lng: ride.pickup_lng });
+        if (ride.dropoff_lat) points.push({ lat: ride.dropoff_lat, lng: ride.dropoff_lng });
+
+        if (points.length >= 2) {
+            drawMultiPointRoute(points);
+            fitBounds();
+        }
+
+    } catch (e) {
+        console.warn("Tracking map init failed:", e);
+    }
+}
 
 function updateAcceptedUI(ride, driver) {
     const isAccepted = ride.status === 'accepted';
     const progressPercent = isAccepted ? 30 : 75;
 
     elements.bookingStatusContainer.innerHTML = `
-                    <div style="width: ${progressPercent}%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); transition: width 1s ease-in-out; position: relative;">
-                        <div style="position: absolute; right: 0; top: 0; height: 100%; width: 20px; background: rgba(255,255,255,0.3); transform: skewX(-20deg);"></div>
+        <!-- 1. Driver Info Card -->
+        <div class="request-card" style="border: 2px solid #10b981; padding: 15px; border-radius: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <div class="driver-avatar" style="width: 50px; height: 50px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #f0fdf4; overflow: hidden;">
+                    ${driver?.avatar_url
+            ? `<img src="${driver.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`
+            : `<i class='bx bxs-user' style="font-size: 24px; color: #10b981;"></i>`
+        }
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="margin: 0; font-size: 15px; color: var(--text-main);">${driver?.fullname || 'Driver'}</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px;">
+                        <span style="background: #10b981; color: white; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">${driver?.pedicab_plate || 'N/A'}</span>
+                        <span style="background: #e2e8f0; color: #475569; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">${driver?.registration_group || 'Verified'}</span>
                     </div>
                 </div>
             </div>
@@ -591,11 +667,30 @@ function updateAcceptedUI(ride, driver) {
                 ${driver?.phone ? `<a href="tel:${driver.phone}" class="btn" style="width: 44px; height: 44px; background: #10b981; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 12px; color: white;"><i class='bx bxs-phone'></i></a>` : ''}
                 <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 44px; height: 44px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; border-radius: 12px;"><i class='bx bxs-megaphone'></i></button>
             </div>
-            <p style="text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 15px; border-top: 1px solid #f1f5f9; padding-top: 10px;">
-                <i class='bx bxs-map' style="color: #ef4444;"></i> Going to: <strong>${ride.dropoff_location}</strong>
-            </p>
+        </div>
+
+        <!-- 2. Tracking Map Card -->
+        <div class="request-card" style="padding: 15px; border-radius: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #0f172a; font-weight: 800; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;">
+                    <i class='bx bxs-map-pin' style="color: #ef4444;"></i> Live Tracking
+                </span>
+                <span style="font-size: 11px; font-weight: 700; color: #10b981;">${isAccepted ? 'Driver Assigned' : 'Heading to Destination'}</span>
+            </div>
+            
+            <div id="passenger-tracking-map" style="height: 200px; width: 100%; border-radius: 12px; z-index: 1;"></div>
+            
+            <div style="margin-top: 12px;">
+                 <div style="height: 6px; background: #f1f5f9; border-radius: 10px; overflow: hidden; position: relative;">
+                    <div style="width: ${progressPercent}%; height: 100%; background: #10b981; transition: width 1s ease-in-out;"></div>
+                </div>
+            </div>
         </div>
     `;
+
+    setTimeout(() => {
+        initTrackingMap(ride, driver);
+    }, 100);
 }
 
 function showCompletionUI(ride) {
@@ -1265,6 +1360,11 @@ window.switchTab = (tab) => {
         homeView.style.display = 'block';
         if (navHome) navHome.classList.add('active');
         checkActiveRide(); // This will trigger initPassengerMap with 'passenger-map'
+        // FIX: Force map resize when switching back to home to prevent gray box
+        setTimeout(() => {
+            if (passengerMap) passengerMap.invalidateSize();
+            if (trackingMap) trackingMap.invalidateSize();
+        }, 100);
     } else if (tab === 'map' && mapView) {
         mapView.style.display = 'block';
         if (header) header.style.display = 'none';
