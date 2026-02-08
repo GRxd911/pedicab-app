@@ -352,6 +352,17 @@ async function initDriverMap() {
         }
     }).catch(err => console.warn('Fast init GPS error:', err));
 
+    // CHECK FOR ACTIVE RIDE TO CONNECT MINIMAP
+    try {
+        const activeRide = activeNavRide || await RideService.fetchActiveRide(currentUser.id);
+        if (activeRide) {
+            console.log("📍 Syncing active ride to Minimap");
+            showNavigationRoute(activeRide);
+        }
+    } catch (e) {
+        console.warn('Minimap context sync failed:', e);
+    }
+
     return driverMap;
 }
 
@@ -803,8 +814,9 @@ async function initExplorationMap() {
 
     // 4. Fetch Requests & Active Trip
     try {
-        const activeRide = await RideService.fetchActiveRide(currentUser.id);
+        const activeRide = activeNavRide || await RideService.fetchActiveRide(currentUser.id);
         if (activeRide) {
+            console.log("📍 Syncing active ride to Full Map");
             showNavigationRoute(activeRide);
         }
 
