@@ -180,49 +180,51 @@ function initTMOMap() {
 function updateTMOMap(activeDrivers, emergencies) {
     if (!tmoMap) initTMOMap();
 
-    // 1. Update Drivers
-    const currentActiveDriverIds = new Set();
-    activeDrivers.forEach(d => {
-        const dUser = Array.isArray(d.users) ? d.users[0] : d.users;
-        const name = dUser?.fullname || 'Driver';
+    const currentDriverIds = new Set();
+    const currentSOSIds = new Set();
 
+    // 1. Update Drivers
+    activeDrivers.forEach(d => {
         const lat = parseFloat(d.current_lat);
         const lng = parseFloat(d.current_lng);
 
-        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        if (!isNaN(lat) && !isNaN(lng)) {
+            const name = (Array.isArray(d.users) ? d.users[0] : d.users)?.fullname || 'Driver';
             const label = `${name} (#${d.pedicab_plate})`;
             addDriverMarker(d.driver_id, lat, lng, label);
 
-            currentActiveDriverIds.add(d.driver_id.toString());
-            driverMarkers[d.driver_id] = true;
-        }
-    });
-
-    // Remove drivers that are no longer active/online
-    Object.keys(driverMarkers).forEach(id => {
-        if (!currentActiveDriverIds.has(id.toString())) {
-            removeMarker(`driver-${id}`);
-            delete driverMarkers[id];
+            const sid = String(d.driver_id);
+            currentDriverIds.add(sid);
+            driverMarkers[sid] = true;
         }
     });
 
     // 2. Update Emergencies
-    const currentActiveSOSIds = new Set();
     emergencies.forEach(e => {
         const lat = parseFloat(e.location_lat);
         const lng = parseFloat(e.location_lng);
 
         if (!isNaN(lat) && !isNaN(lng) && e.status === 'active') {
-            addSOSMarker(e.id, lat, lng, e.passenger?.fullname || 'Emergency');
-            currentActiveSOSIds.add(e.id.toString());
-            sosMarkers[e.id] = true;
+            const name = e.passenger?.fullname || 'Emergency';
+            addSOSMarker(e.id, lat, lng, name);
+
+            const sid = String(e.id);
+            currentSOSIds.add(sid);
+            sosMarkers[sid] = true;
         }
     });
 
-    // Remove resolved/cancelled emergencies
+    // Cleanup: Remove drivers that are no longer online
+    Object.keys(driverMarkers).forEach(id => {
+        if (!currentDriverIds.has(String(id))) {
+            removeMarker(`driver-${id}`);
+            delete driverMarkers[id];
+        }
+    });
+
+    // Cleanup: Remove resolved emergencies
     Object.keys(sosMarkers).forEach(id => {
-        const resId = id.toString();
-        if (!currentActiveSOSIds.has(resId)) {
+        if (!currentSOSIds.has(String(id))) {
             removeMarker(`sos-${id}`);
             delete sosMarkers[id];
         }
