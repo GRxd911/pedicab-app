@@ -18,6 +18,75 @@ const views = {
     'broadcasting': document.getElementById('broadcast-view')
 };
 
+// --- CUSTOM ALERT ---
+function showAlert(title, message, type = 'error') {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('custom-alert-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'custom-alert-overlay';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 24px;
+        `;
+
+        const icon = type === 'error' ? 'bx-error-circle' : 'bx-check-circle';
+        const iconColor = type === 'error' ? '#ef4444' : '#10b981';
+        const iconBg = type === 'error' ? '#fef2f2' : '#f0fdf4';
+        const primaryColor = '#2D3192';
+
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: white; width: 100%; max-width: 380px; border-radius: 28px;
+            padding: 32px 24px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: modalFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        `;
+
+        card.innerHTML = `
+            <div style="width: 64px; height: 64px; background: ${iconBg}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                <i class='bx ${icon}' style="font-size: 32px; color: ${iconColor};"></i>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px; font-family: sans-serif;">${title}</h3>
+            <p style="font-size: 15px; color: #64748b; line-height: 1.5; margin-bottom: 32px; font-family: sans-serif;">${message}</p>
+            <button id="alert-ok" style="width: 100%; height: 52px; background: ${primaryColor}; color: white; border: none; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s;">Got it</button>
+        `;
+
+        // Add Animation Keyframes
+        if (!document.getElementById('modal-animations')) {
+            const style = document.createElement('style');
+            style.id = 'modal-animations';
+            style.innerHTML = `
+                @keyframes modalFadeIn {
+                    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        const okBtn = card.querySelector('#alert-ok');
+        okBtn.addEventListener('mouseover', () => okBtn.style.opacity = '0.9');
+        okBtn.addEventListener('mouseout', () => okBtn.style.opacity = '1');
+
+        const cleanup = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.2s ease';
+            setTimeout(() => {
+                overlay.remove();
+                resolve();
+            }, 200);
+        };
+
+        okBtn.onclick = cleanup;
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+    });
+}
+
 // --- INITIALIZATION ---
 async function init() {
     const session = await TMOAuth.checkTMOSession();
@@ -389,12 +458,12 @@ window.saveVerification = async () => {
 
     try {
         await TMODashboard.verifyDriver(id, permit, zone, inspection);
-        alert('Driver Verified!');
+        await showAlert('Driver Verified', 'The driver has been successfully verified and added to the official database.', 'success');
         window.closeVerifyModal();
         await loadDrivers();
         await loadDashboardData();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Verification Failed', e.message);
     }
 };
 
@@ -405,12 +474,12 @@ window.sendBroadcast = async () => {
 
     try {
         await TMODashboard.sendBroadcast(title, message, type);
-        alert('Broadcast Sent!');
+        await showAlert('Broadcast Sent', 'Your alert has been broadcasted to all active drivers in the city.', 'success');
         document.getElementById('broadcast-title').value = '';
         document.getElementById('broadcast-message').value = '';
         await loadBroadcastsHistory();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Broadcast Error', e.message);
     }
 };
 
@@ -420,7 +489,7 @@ window.deleteBroadcast = async (id) => {
         await TMODashboard.deleteBroadcast(id);
         await loadBroadcastsHistory();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Error', e.message);
     }
 };
 
@@ -430,7 +499,7 @@ window.markResolved = async (id) => {
         await loadEmergencies();
         await loadDashboardData();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Sync Error', e.message);
     }
 };
 
@@ -442,7 +511,7 @@ window.deleteEmergency = async (id) => {
         await loadEmergencies();
         await loadDashboardData();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Delete Error', e.message);
     }
 };
 
@@ -453,7 +522,7 @@ window.deleteAllResolvedEmergencies = async () => {
         await loadEmergencies();
         await loadDashboardData();
     } catch (e) {
-        alert('Error: ' + e.message);
+        await showAlert('Clear Error', e.message);
     }
 };
 
