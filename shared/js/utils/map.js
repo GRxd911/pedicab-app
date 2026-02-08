@@ -32,11 +32,10 @@ export function initMap(containerId, center = { lat: 10.3157, lng: 123.8854 }, z
         attributionControl: true
     }).setView([center.lat, center.lng], zoom);
 
-    // Add CartoDB tile layer (beautiful, free, no API key)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
+    // Switch to OSM to bypass CartoDB cache failures
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
         crossOrigin: true
     }).addTo(map);
 
