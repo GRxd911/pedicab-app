@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Info | Driver App</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../shared/css/style.css">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <style>
         .info-container {
@@ -132,7 +132,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js"></script>
+    <script src="../shared/js/config/supabase-config.js"></script>
     <script>
         async function loadVehicleInfo() {
             const { data: { session } } = await supabaseClient.auth.getSession();
