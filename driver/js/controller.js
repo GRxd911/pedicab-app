@@ -375,7 +375,8 @@ function startTrackingLocation() {
 
         // Update local map marker
         if (driverMap) {
-            updateMarkerPosition(`driver-${currentUser.id}`, pos.lat, pos.lng);
+            // Use addDriverMarker instead of update so it re-adds if missing (e.g. after clear)
+            addDriverMarker(currentUser.id, pos.lat, pos.lng, 'You');
         }
 
         // Broadcast to DB
@@ -411,12 +412,8 @@ async function showNavigationRoute(ride) {
     const startLng = currentDriverLng || ride.driver_lng || 123.3033;
 
     if (startLat && startLng) {
-        const userIcon = `<div class="user-location-marker"></div>`;
-        addMarker(`driver-${currentUser.id}`, currentDriverLat, currentDriverLng, {
-            icon: userIcon,
-            title: "You",
-            popup: "Your Current Position"
-        });
+        // Use the official Driver Marker (Car/Tricycle) so the driver can see themselves
+        addDriverMarker(currentUser.id, startLat, startLng, 'You');
 
         const points = [{ lat: startLat, lng: startLng }];
         if (ride.pickup_lat) {
