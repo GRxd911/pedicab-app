@@ -211,6 +211,31 @@ function setupListeners() {
     // Autocomplete for Pick-up and Drop-off
     setupAutocomplete(elements.pickupInput, elements.pickupSuggestions, 'pickup');
     setupAutocomplete(elements.dropoffInput, elements.dropoffSuggestions, 'dropoff');
+
+    // BACKGROUND SYNC: Refresh driver locations every 10s as a fallback to real-time
+    setInterval(async () => {
+        try {
+            const drivers = await CommuterRides.fetchAvailableDrivers();
+            if (passengerMap) {
+                drivers.forEach(d => {
+                    const lat = parseFloat(d.current_lat);
+                    const lng = parseFloat(d.current_lng);
+                    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                        const icon = `
+                            <div class="driver-marker-premium">
+                                <div class="marker-halo"></div>
+                                <div class="marker-core">
+                                    <i class='bx bxs-car'></i>
+                                </div>
+                            </div>
+                        `;
+                        updateMarkerPosition(`driver-${d.driver_id}`, lat, lng, icon);
+                    }
+                });
+            }
+            updateAvailableDriversUI(drivers);
+        } catch (e) { console.warn('Driver bg sync failed'); }
+    }, 10000);
 }
 
 // --- RIDE MANAGEMENT ---
