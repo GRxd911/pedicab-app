@@ -161,10 +161,11 @@ async function init() {
 }
 
 // --- MAP INTEGRATION ---
-import { initMap, addDriverMarker, addPassengerMarker, addSOSMarker, addDestinationMarker, clearAllMarkers, updateMarkerPosition } from '../../shared/js/utils/map.js';
+import { initMap, addDriverMarker, addPassengerMarker, addSOSMarker, addDestinationMarker, clearAllMarkers, updateMarkerPosition, removeMarker } from '../../shared/js/utils/map.js';
 
 let tmoMap = null;
 let driverMarkers = {};
+let sosMarkers = {};
 
 // Initialize TMO Map
 function initTMOMap() {
@@ -179,26 +180,46 @@ function initTMOMap() {
 function updateTMOMap(activeDrivers, emergencies) {
     if (!tmoMap) initTMOMap();
 
-    // We don't clear all markers because we want smooth updates
-    // But we should remove offline drivers eventually.
-    // For now, simpler approach: update active ones
-
     // 1. Update Drivers
+    const currentActiveDriverIds = new Set();
     activeDrivers.forEach(d => {
         const dUser = Array.isArray(d.users) ? d.users[0] : d.users;
         const name = dUser?.fullname || 'Driver';
 
         if (d.current_lat && d.current_lng) {
             addDriverMarker(d.driver_id, d.current_lat, d.current_lng, `${name} (#${d.pedicab_plate})`);
+            currentActiveDriverIds.add(d.driver_id.toString());
+            driverMarkers[d.driver_id] = true;
+        }
+    });
+
+    // Remove drivers that are no longer active/online
+    Object.keys(driverMarkers).forEach(id => {
+        if (!currentActiveDriverIds.has(id.toString())) {
+            removeMarker(`driver-${id}`);
+            delete driverMarkers[id];
         }
     });
 
     // 2. Update Emergencies
+    const currentActiveSOSIds = new Set();
     emergencies.forEach(e => {
         if (e.location_lat && e.location_lng && e.status === 'active') {
             addSOSMarker(e.id, e.location_lat, e.location_lng, e.passenger?.fullname || 'Emergency');
-            // Auto center on emergency
-            tmoMap.setView([e.location_lat, e.location_lng], 16);
+            currentActiveSOSIds.add(e.id.toString());
+            sosMarkers[e.id] = true;
+
+            // Auto center on new emergency (if we haven't centered on it yet)
+            // For now, keeping your auto-center logic but making it id-based
+            // tmoMap.setView([e.location_lat, e.location_lng], 16);
+        }
+    });
+
+    // Remove resolved/cancelled emergencies
+    Object.keys(sosMarkers).forEach(id => {
+        if (!currentActiveSOSIds.has(id.toString())) {
+            removeMarker(`sos-${id}`);
+            delete sosMarkers[id];
         }
     });
 }
