@@ -186,8 +186,25 @@ function updateTMOMap(activeDrivers, emergencies) {
         const dUser = Array.isArray(d.users) ? d.users[0] : d.users;
         const name = dUser?.fullname || 'Driver';
 
-        if (d.current_lat && d.current_lng) {
-            addDriverMarker(d.driver_id, d.current_lat, d.current_lng, `${name} (#${d.pedicab_plate})`);
+        if (d.current_lat != null && d.current_lng != null) {
+            const markerId = `driver-${d.driver_id}`;
+            const label = `${name} (#${d.pedicab_plate})`;
+
+            // Use updateMarkerPosition for smooth movement instead of re-adding
+            const icon = `
+                <div class="driver-marker-premium">
+                    <div class="marker-halo"></div>
+                    <div class="marker-core">
+                        <i class='bx bxs-car'></i>
+                    </div>
+                </div>
+            `;
+
+            updateMarkerPosition(markerId, d.current_lat, d.current_lng, icon, {
+                title: label,
+                popup: `<b>${label}</b><br>Driver Location`
+            });
+
             currentActiveDriverIds.add(d.driver_id.toString());
             driverMarkers[d.driver_id] = true;
         }
@@ -204,14 +221,10 @@ function updateTMOMap(activeDrivers, emergencies) {
     // 2. Update Emergencies
     const currentActiveSOSIds = new Set();
     emergencies.forEach(e => {
-        if (e.location_lat && e.location_lng && e.status === 'active') {
+        if (e.location_lat != null && e.location_lng != null && e.status === 'active') {
             addSOSMarker(e.id, e.location_lat, e.location_lng, e.passenger?.fullname || 'Emergency');
             currentActiveSOSIds.add(e.id.toString());
             sosMarkers[e.id] = true;
-
-            // Auto center on new emergency (if we haven't centered on it yet)
-            // For now, keeping your auto-center logic but making it id-based
-            // tmoMap.setView([e.location_lat, e.location_lng], 16);
         }
     });
 
