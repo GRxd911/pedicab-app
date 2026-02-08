@@ -672,10 +672,6 @@ function updateAcceptedUI(ride, driver) {
                 <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 44px; height: 44px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; border-radius: 12px;"><i class='bx bxs-megaphone'></i></button>
             </div>
         </div>
-
-                <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 44px; height: 44px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; border-radius: 12px;"><i class='bx bxs-megaphone'></i></button>
-            </div>
-        </div>
     `;
 
     // SHOW ORIGINAL MAP CONTAINER
@@ -1369,9 +1365,19 @@ window.switchTab = (tab) => {
         // FIX: Force map resize when switching back to home to prevent gray box
         setTimeout(() => {
             if (passengerMap) passengerMap.invalidateSize();
-            if (trackingMap) trackingMap.invalidateSize();
+            // Re-init tracking map to ensure it renders if we have an active ride
+            if (activeTrackingRide && activeTrackingRide.status === 'accepted') {
+                // Pass minimal driver object if needed, or fetch fresh
+                const d = {
+                    driver_id: activeTrackingRide.driver_id,
+                    current_lat: activeTrackingRide.driver_lat, // fallback
+                    current_lng: activeTrackingRide.driver_lng
+                };
+                // Try to use existing driver data if available, or just init with ride data
+                initTrackingMap(activeTrackingRide, d);
+            }
         }, 100);
-    } else if (tab === 'map' && mapView) {
+    } else if (tab === 'activity' && mapView) { // Assuming 'activityView' was a typo and it should be 'mapView'
         mapView.style.display = 'block';
         if (header) header.style.display = 'none';
         if (navMap) navMap.classList.add('active');
