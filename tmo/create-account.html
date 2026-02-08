@@ -4,103 +4,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMO Account Creator</title>
+    <title>TMO Admin Registration | Dumaguete Pedicab</title>
     <link rel="stylesheet" href="../shared/css/style.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <style>
-        body {
-            background: #f8fafc;
+        .auth-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            font-family: sans-serif;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        .setup-card {
+        .auth-card {
             background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 400px;
+            border-radius: 24px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            border-top: 5px solid #2D3192;
         }
 
-        .setup-card h1 {
-            color: #2D3192;
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            background: #2D3192;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 15px;
+            box-shadow: 0 8px 16px rgba(45, 49, 146, 0.2);
+        }
+
+        .auth-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .auth-header p {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .form-group {
             margin-bottom: 20px;
         }
 
-        .setup-card p {
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2D3192;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(45, 49, 146, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            background: #2D3192;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(45, 49, 146, 0.25);
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(45, 49, 146, 0.3);
+        }
+
+        .auth-footer {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 13px;
             color: #64748b;
-            margin-bottom: 30px;
-            line-height: 1.5;
+        }
+
+        .auth-footer a {
+            color: #2D3192;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .security-badge {
+            background: #eff6ff;
+            color: #2D3192;
+            font-size: 11px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 25px;
+            border: 1px dashed #bfdbfe;
         }
     </style>
 </head>
 
-<body>
-    <div class="setup-card">
-        <h1>TMO Setup</h1>
-        <p>Enter the credentials for the new TMO Admin account.</p>
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-            <input type="email" id="tmoEmail" placeholder="email@example.com" class="form-input"
-                value="tmo-admin@gmail.com">
-            <input type="text" id="tmoPass" placeholder="Password" class="form-input" value="admin1234">
+<body style="background: #eef2f6;">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-icon">
+                    <i class='bx bxs-badge-check'></i>
+                </div>
+                <h1>Admin Registration</h1>
+                <p>Register a new Traffic Management Officer account.</p>
+            </div>
+
+            <div class="security-badge">
+                <i class='bx bxs-lock'></i>
+                <span>Secure Official Registration</span>
+            </div>
+
+            <form id="tmoRegForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="tmoName" class="form-input" placeholder="Officer John Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Admin Email</label>
+                    <input type="email" id="tmoEmail" class="form-input" placeholder="admin@tmo.gov.ph" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Secure Password</label>
+                    <input type="password" id="tmoPass" class="form-input" placeholder="••••••••" required
+                        minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="tmoPassConfirm" class="form-input" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" id="createBtn" class="btn">
+                    Create Admin Account <i class='bx bx-user-plus'></i>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Already registered? <a href="signin.html">Sign In Here</a>
+                <div id="status" style="margin-top:15px; font-weight:600; min-height:20px;"></div>
+            </div>
         </div>
-        <button id="createBtn" class="btn" style="background: #2D3192; color: white; width: 100%;">Create TMO
-            Account</button>
-        <div id="status" style="margin-top: 20px; font-weight: 600; font-size: 14px;"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../shared/js/config/supabase-config.js"></script>
     <script>
-        document.getElementById('createBtn').addEventListener('click', async () => {
+        document.getElementById('tmoRegForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
             const status = document.getElementById('status');
+            const btn = document.getElementById('createBtn');
+            const name = document.getElementById('tmoName').value;
             const email = document.getElementById('tmoEmail').value;
             const password = document.getElementById('tmoPass').value;
+            const confirm = document.getElementById('tmoPassConfirm').value;
 
-            status.innerText = "Attempting to create...";
-            status.style.color = "blue";
-
-            // 1. Create the account properly via the auth system
-            const { data, error } = await supabaseClient.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        full_name: "TMO Administrator",
-                        role: "tmo"
-                    }
-                }
-            });
-
-            if (error) {
-                console.error("DEBUG AUTH ERROR:", error);
-                status.innerText = "Auth Error: " + error.message;
-                status.style.color = "red";
+            if (password !== confirm) {
+                alert("Passwords do not match!");
                 return;
             }
 
-            const user = data.user;
-            if (user) {
-                // 2. Add to public users table
-                const { error: dbError } = await supabaseClient
-                    .from('users')
-                    .upsert([
-                        { id: user.id, fullname: "TMO Administrator", email: email, role: "tmo" }
-                    ]);
+            status.innerText = "Creating secure account...";
+            status.style.color = "#2D3192";
+            btn.disabled = true;
+            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Processing...";
 
-                if (dbError) {
-                    console.error("DEBUG DB ERROR:", dbError);
-                    status.innerText = "Auth succeeded, but DB listing failed: " + dbError.message;
-                    status.style.color = "orange";
-                    return;
+            try {
+                // 1. Create the account
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: name,
+                            role: "tmo"
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                // 2. Add to public users table
+                if (data.user) {
+                    const { error: dbError } = await supabaseClient
+                        .from('users')
+                        .upsert([
+                            { id: data.user.id, fullname: name, email: email, role: "tmo" }
+                        ]);
+
+                    if (dbError) {
+                        // If DB fails, we should ideally rollback auth, but for now just warn
+                        console.error("DB Error:", dbError);
+                        throw new Error("Account created but profile sync failed. Please contact support.");
+                    }
+
+                    status.innerText = "Success! Redirecting...";
+                    status.style.color = "green";
+
+                    setTimeout(() => {
+                        window.location.href = 'signin.html';
+                    }, 1500);
                 }
 
-                status.innerText = "Success! Account Created.";
-                status.style.color = "green";
-                alert("TMO Account Created!\nEmail: " + email + "\nPassword: " + password);
+            } catch (err) {
+                console.error("Registration Error:", err);
+                status.innerText = err.message;
+                status.style.color = "#ef4444";
+                btn.disabled = false;
+                btn.innerHTML = "Create Admin Account <i class='bx bx-user-plus'></i>";
             }
         });
     </script>
