@@ -748,23 +748,36 @@ window.openChat = (rideId, driverName) => {
     elements.chatOverlay.style.display = 'flex';
     loadChatMessages();
 
-    // Switch to Real-time Chat
+    // Switch to Hybrid Real-time Chat
     if (window.chatChannel) window.chatChannel.unsubscribe();
+    if (window.chatPulse) clearInterval(window.chatPulse);
+
+    // 1. Real-time Listener (Instant)
     window.chatChannel = supabaseClient
         .channel(`chat-${rideId}`)
         .on('postgres_changes', {
             event: 'INSERT',
+            schema: 'public',
             table: 'messages',
             filter: `ride_id=eq.${rideId}`
         }, () => {
+            console.log('⚡ Real-time message received');
             loadChatMessages();
         })
-        .subscribe();
+        .subscribe((status) => {
+            console.log('Chat Real-time Status:', status);
+        });
+
+    // 2. Fast Fallback Polling (Guarantees delivery every 2.5s)
+    window.chatPulse = setInterval(() => {
+        loadChatMessages();
+    }, 2500);
 };
 
 window.closeChat = () => {
     elements.chatOverlay.style.display = 'none';
     if (window.chatChannel) window.chatChannel.unsubscribe();
+    if (window.chatPulse) clearInterval(window.chatPulse);
     chatRideId = null;
 };
 
