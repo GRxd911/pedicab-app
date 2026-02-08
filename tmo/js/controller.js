@@ -186,24 +186,12 @@ function updateTMOMap(activeDrivers, emergencies) {
         const dUser = Array.isArray(d.users) ? d.users[0] : d.users;
         const name = dUser?.fullname || 'Driver';
 
-        if (d.current_lat != null && d.current_lng != null) {
-            const markerId = `driver-${d.driver_id}`;
+        const lat = parseFloat(d.current_lat);
+        const lng = parseFloat(d.current_lng);
+
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
             const label = `${name} (#${d.pedicab_plate})`;
-
-            // Use updateMarkerPosition for smooth movement instead of re-adding
-            const icon = `
-                <div class="driver-marker-premium">
-                    <div class="marker-halo"></div>
-                    <div class="marker-core">
-                        <i class='bx bxs-car'></i>
-                    </div>
-                </div>
-            `;
-
-            updateMarkerPosition(markerId, d.current_lat, d.current_lng, icon, {
-                title: label,
-                popup: `<b>${label}</b><br>Driver Location`
-            });
+            addDriverMarker(d.driver_id, lat, lng, label);
 
             currentActiveDriverIds.add(d.driver_id.toString());
             driverMarkers[d.driver_id] = true;
@@ -221,8 +209,11 @@ function updateTMOMap(activeDrivers, emergencies) {
     // 2. Update Emergencies
     const currentActiveSOSIds = new Set();
     emergencies.forEach(e => {
-        if (e.location_lat != null && e.location_lng != null && e.status === 'active') {
-            addSOSMarker(e.id, e.location_lat, e.location_lng, e.passenger?.fullname || 'Emergency');
+        const lat = parseFloat(e.location_lat);
+        const lng = parseFloat(e.location_lng);
+
+        if (!isNaN(lat) && !isNaN(lng) && e.status === 'active') {
+            addSOSMarker(e.id, lat, lng, e.passenger?.fullname || 'Emergency');
             currentActiveSOSIds.add(e.id.toString());
             sosMarkers[e.id] = true;
         }
@@ -230,7 +221,8 @@ function updateTMOMap(activeDrivers, emergencies) {
 
     // Remove resolved/cancelled emergencies
     Object.keys(sosMarkers).forEach(id => {
-        if (!currentActiveSOSIds.has(id.toString())) {
+        const resId = id.toString();
+        if (!currentActiveSOSIds.has(resId)) {
             removeMarker(`sos-${id}`);
             delete sosMarkers[id];
         }
