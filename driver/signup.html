@@ -217,6 +217,7 @@
                 email: email,
                 password: password,
                 options: {
+                    emailRedirectTo: window.location.origin + '/driver/signin.html',
                     data: {
                         full_name: fullName,
                         role: role
@@ -252,7 +253,7 @@
                         ]);
                 }
 
-                await showAlert('Account Created', 'Please check your Gmail inbox and click the verification link to activate your account.', 'success');
+                await showAlert('Account Created', 'Registration successful! We have sent a confirmation link to your Gmail. Please click the link in your email and you will be redirected to log in.', 'success');
                 window.location.href = 'signin.html';
             }
         });
