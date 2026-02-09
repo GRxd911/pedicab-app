@@ -183,7 +183,7 @@ function toRad(degrees) {
 export async function geocodeAddress(address) {
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Dumaguete City, Philippines')}&limit=1`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Dumaguete City, Philippines')}&limit=1&email=pedicab_demo@example.com`
         );
         const data = await response.json();
 
@@ -224,7 +224,7 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
         }
 
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1&email=pedicab_demo@example.com`
         );
         const data = await response.json();
 
@@ -280,7 +280,7 @@ export async function reverseGeocode(lat, lng) {
     try {
         // Added zoom=18 for street-level precision and address details
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&email=pedicab_demo@example.com`
         );
         const data = await response.json();
 
