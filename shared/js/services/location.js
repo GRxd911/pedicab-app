@@ -244,14 +244,30 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
     }
 }
 
+// Simple cache to store addresses and prevent redundant API calls
+const addressCache = new Map();
+
 /**
  * Reverse geocode coordinates to address
  */
 export async function reverseGeocode(lat, lng) {
+    // Round coordinates slightly to use as a cache key
+    const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    if (addressCache.has(cacheKey)) {
+        return addressCache.get(cacheKey);
+    }
+
     try {
+        // Safety: Timeout after 5 seconds so the app doesn't hang
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&app=pedicab-commuter-app`,
+            { signal: controller.signal }
         );
+
+        clearTimeout(timeoutId);
         const data = await response.json();
 
         if (data && data.address) {
@@ -262,21 +278,29 @@ export async function reverseGeocode(lat, lng) {
                 addr.mall || addr.amenity || addr.building ||
                 addr.office || addr.shop || addr.tourism || addr.historic;
 
+            let result = null;
             if (placeName) {
                 const road = addr.road || addr.suburb || addr.neighbourhood || '';
-                return road ? `${placeName}, ${road}` : placeName;
-            }
-
-            // FALLBACK 1: Road & Area
-            if (addr.road) {
+                result = road ? `${placeName}, ${road}` : placeName;
+            } else if (addr.road) {
+                // FALLBACK 1: Road & Area
                 const area = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.village || '';
-                return area ? `${addr.road}, ${area}` : addr.road;
+                result = area ? `${addr.road}, ${area}` : addr.road;
+            } else {
+                result = data.display_name;
             }
 
-            return data.display_name;
+            if (result) {
+                addressCache.set(cacheKey, result);
+                return result;
+            }
         }
     } catch (error) {
-        console.error('Reverse geocoding error:', error);
+        if (error.name === 'AbortError') {
+            console.warn('Map server timed out. Using fallback.');
+        } else {
+            console.error('Reverse geocoding error:', error);
+        }
     }
 
     return null;
