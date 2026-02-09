@@ -278,23 +278,37 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
  */
 export async function reverseGeocode(lat, lng) {
     try {
-        // Added zoom=18 for street-level precision and address details
         const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&email=pedicab_demo@example.com`
         );
         const data = await response.json();
 
-        if (data && data.display_name) {
-            // Try to get a shorter, cleaner address if possible (Road + City)
+        if (data && data.address) {
             const addr = data.address;
-            if (addr && addr.road && (addr.city || addr.town || addr.municipality)) {
-                return `${addr.road}, ${addr.city || addr.town || addr.municipality}`;
+
+            // PRIORITY: Specific Building/Place Name
+            const placeName = addr.university || addr.school || addr.college ||
+                addr.mall || addr.amenity || addr.building ||
+                addr.office || addr.shop || addr.tourism || addr.historic;
+
+            if (placeName) {
+                const road = addr.road || addr.suburb || addr.neighbourhood || '';
+                return road ? `${placeName}, ${road}` : placeName;
             }
+
+            // FALLBACK 1: Road & Suburb/Town
+            if (addr.road) {
+                const area = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.municipality || '';
+                return area ? `${addr.road}, ${area}` : addr.road;
+            }
+
+            // FALLBACK 2: Full Display Name
             return data.display_name;
         }
     } catch (error) {
         console.error('Reverse geocoding error:', error);
     }
 
-    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    // NEVER show raw numbers to driver
+    return "Current Location";
 }
