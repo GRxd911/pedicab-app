@@ -1290,6 +1290,35 @@ async function initPassengerMap() {
             // Pan map to user
             centerMap(pos.lat, pos.lng);
         }
+
+        // CHECK ACTIVE RIDE FOR BIG MAP
+        if (activeTrackingRide && activeTrackingRide.status === 'accepted') {
+            console.log("📍 Syncing active ride to Big Map");
+            const dLat = parseFloat(activeTrackingRide.driver_lat);
+            const dLng = parseFloat(activeTrackingRide.driver_lng);
+
+            if (!isNaN(dLat) && !isNaN(dLng)) {
+                const driverIcon = `
+                    <div class="driver-marker-premium">
+                        <div class="marker-halo"></div>
+                        <div class="marker-core"><i class='bx bxs-car'></i></div>
+                    </div>
+                `;
+                addMarker(`driver-${activeTrackingRide.driver_id}`, dLat, dLng, { icon: driverIcon });
+
+                // Draw route if points exist
+                const points = [];
+                points.push({ lat: dLat, lng: dLng });
+                if (activeTrackingRide.pickup_lat) points.push({ lat: activeTrackingRide.pickup_lat, lng: activeTrackingRide.pickup_lng });
+                if (activeTrackingRide.dropoff_lat) points.push({ lat: activeTrackingRide.dropoff_lat, lng: activeTrackingRide.dropoff_lng });
+
+                if (points.length >= 2) {
+                    drawMultiPointRoute(points);
+                    fitBounds();
+                }
+            }
+        }
+
     }).catch(console.warn);
 
     return passengerMap;
