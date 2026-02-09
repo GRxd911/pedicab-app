@@ -726,6 +726,55 @@ function showCompletionUI(ride) {
 
 // --- GLOBAL ACTIONS EXPOSED TO WINDOW ---
 
+window.detectLocation = async () => {
+    const input = elements.pickupInput;
+    if (input) input.value = "Locating...";
+
+    try {
+        const pos = await getCurrentPosition();
+        if (!pos) throw new Error("Location permission denied");
+
+        currentPassengerLat = pos.lat;
+        currentPassengerLng = pos.lng;
+
+        const address = await reverseGeocode(pos.lat, pos.lng);
+        if (input) input.value = address;
+
+        detectedAddressString = address;
+        selectedPickupCoords = null; // Clear manual pin
+        manualPickupAddress = null;
+
+        // Update map "You" marker
+        const userIcon = `<div class="user-location-marker"></div>`;
+        addMarker(`passenger-${currentUser.id}`, pos.lat, pos.lng, {
+            icon: userIcon,
+            title: "You",
+            popup: "Your Current Position"
+        });
+
+        if (passengerMap) {
+            centerMap(pos.lat, pos.lng);
+        }
+
+    } catch (err) {
+        console.error("Location detection failed:", err);
+        if (input) input.value = "";
+        alert("Could not detect location. Please ensure GPS is enabled.");
+    }
+};
+
+window.setPinLocation = (type, lat, lng, address) => {
+    if (type === 'pickup') {
+        selectedPickupCoords = { lat, lng };
+        manualPickupAddress = address;
+        if (elements.pickupInput) elements.pickupInput.value = address;
+    } else {
+        selectedDropoffCoords = { lat, lng };
+        manualDropoffAddress = address;
+        if (elements.dropoffInput) elements.dropoffInput.value = address;
+    }
+};
+
 window.requestRide = async () => {
     const pickup = elements.pickupInput.value;
     const dropoff = elements.dropoffInput.value;
@@ -1290,35 +1339,6 @@ async function initPassengerMap() {
             // Pan map to user
             centerMap(pos.lat, pos.lng);
         }
-
-        // CHECK ACTIVE RIDE FOR BIG MAP
-        if (activeTrackingRide && activeTrackingRide.status === 'accepted') {
-            console.log("📍 Syncing active ride to Big Map");
-            const dLat = parseFloat(activeTrackingRide.driver_lat);
-            const dLng = parseFloat(activeTrackingRide.driver_lng);
-
-            if (!isNaN(dLat) && !isNaN(dLng)) {
-                const driverIcon = `
-                    <div class="driver-marker-premium">
-                        <div class="marker-halo"></div>
-                        <div class="marker-core"><i class='bx bxs-car'></i></div>
-                    </div>
-                `;
-                addMarker(`driver-${activeTrackingRide.driver_id}`, dLat, dLng, { icon: driverIcon });
-
-                // Draw route if points exist
-                const points = [];
-                points.push({ lat: dLat, lng: dLng });
-                if (activeTrackingRide.pickup_lat) points.push({ lat: activeTrackingRide.pickup_lat, lng: activeTrackingRide.pickup_lng });
-                if (activeTrackingRide.dropoff_lat) points.push({ lat: activeTrackingRide.dropoff_lat, lng: activeTrackingRide.dropoff_lng });
-
-                if (points.length >= 2) {
-                    drawMultiPointRoute(points);
-                    fitBounds();
-                }
-            }
-        }
-
     }).catch(console.warn);
 
     return passengerMap;
