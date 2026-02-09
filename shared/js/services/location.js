@@ -224,12 +224,7 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
         }
 
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`,
-            {
-                headers: {
-                    'User-Agent': 'PedicabApp/1.0 (Student Project)'
-                }
-            }
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`
         );
         const data = await response.json();
 
