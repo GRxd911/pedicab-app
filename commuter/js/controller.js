@@ -1517,17 +1517,20 @@ async function initExplorationMap() {
             });
 
             // Get address for the popup
-            const address = await reverseGeocode(lat, lng);
+            let address = await reverseGeocode(lat, lng);
+            if (!address) address = "Pinned Location"; // Safe fallback
+
+            const safeAddress = address.replace(/'/g, "\\'");
 
             const popupHtml = `
                 <div style="padding: 10px; min-width: 150px; font-family: 'Outfit', sans-serif;">
                     <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">${address}</p>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button onclick="window.setPinLocation('pickup', ${lat}, ${lng}, '${address.replace(/'/g, "\\'")}')" 
+                        <button onclick="window.setPinLocation('pickup', ${lat}, ${lng}, '${safeAddress}')" 
                             style="background: #10b981; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
                             SET AS PICKUP
                         </button>
-                        <button onclick="window.setPinLocation('dropoff', ${lat}, ${lng}, '${address.replace(/'/g, "\\'")}')" 
+                        <button onclick="window.setPinLocation('dropoff', ${lat}, ${lng}, '${safeAddress}')" 
                             style="background: #ef4444; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
                             SET AS DROPOFF
                         </button>
