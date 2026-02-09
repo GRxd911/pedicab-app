@@ -752,7 +752,8 @@
                     <a href="#" onclick="openEditProfile()" class="menu-item"><i class='bx bx-edit-alt'></i> Edit
                         Profile</a>
                     <a href="vehicle-info.html" class="menu-item"><i class='bx bx-car'></i> Vehicle Info</a>
-                    <a href="terms.html" class="menu-item"><i class='bx bx-shield-quarter'></i> Terms & Conditions</a>
+                    <a href="../public/terms.html" class="menu-item"><i class='bx bx-shield-quarter'></i> Terms &
+                        Conditions</a>
                     <a href="#" onclick="logout()" class="menu-item logout-btn"><i class='bx bx-log-out'></i> Logout</a>
                 </div>
             </div>
@@ -762,12 +763,16 @@
         <div id="earningsOverlay" class="profile-overlay"
             onclick="document.getElementById('earningsOverlay').style.display='none'">
             <div class="profile-card" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 style="font-size: 20px;">Earnings Report</h2>
+                    <i class='bx bx-x' onclick="document.getElementById('earningsOverlay').style.display='none'"
+                        style="font-size: 24px; cursor: pointer; color: var(--text-muted);"></i>
+                </div>
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div
                         style="width: 80px; height: 80px; background: #d1fae5; color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 16px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                         <i class='bx bxs-wallet'></i>
                     </div>
-                    <h2 style="font-size: 20px;">Earnings Report</h2>
                     <p style="font-size: 13px; color: var(--text-muted);">Summary of your recent income</p>
                 </div>
 
@@ -982,7 +987,7 @@
     <!-- Leaflet Routing Machine JS -->
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js?v=1.2"></script>
 
-    <script type="module" src="js/controller.js"></script>
+    <script type="module" src="js/controller.js?v=1.3"></script>
 </body>
 
 </html>

@@ -250,15 +250,18 @@ function showActiveRideUI(ride) {
 async function loadEarnings() {
     try {
         const stats = await DriverService.getDailyEarnings(currentUser.id);
+        const weeklyStats = await DriverService.getWeeklyEarnings(currentUser.id);
         const tripsEl = document.getElementById('total-trips');
         const earningsEl = document.getElementById('total-earnings');
         const todayEarnEl = document.getElementById('modal-today-earn');
         const modalTotalTrips = document.getElementById('modal-total-trips');
+        const weeklyEarnEl = document.getElementById('modal-week-earn');
 
         if (tripsEl) tripsEl.innerText = stats.count;
         if (earningsEl) earningsEl.innerText = `₱${stats.total.toLocaleString()}`;
         if (todayEarnEl) todayEarnEl.innerText = `₱${stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
         if (modalTotalTrips) modalTotalTrips.innerText = stats.count;
+        if (weeklyEarnEl) weeklyEarnEl.innerText = `₱${weeklyStats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
         // Load History List
         const history = await DriverService.getRecentHistory(currentUser.id);
@@ -689,6 +692,9 @@ window.closeProfile = (e) => {
 };
 
 window.openEditProfile = () => {
+    // Hide the main profile menu first to prevent overlapping
+    document.getElementById('profileOverlay').style.display = 'none';
+
     document.getElementById('editProfileOverlay').style.display = 'flex';
     // Populate fields
     document.getElementById('edit-fullname').value = currentUser.user_metadata?.full_name || '';
@@ -699,6 +705,8 @@ window.openEditProfile = () => {
 window.closeEditProfile = (e) => {
     if (e.target.id === 'editProfileOverlay' || e.target.classList.contains('bx-x')) {
         document.getElementById('editProfileOverlay').style.display = 'none';
+        // Restore the main profile menu
+        document.getElementById('profileOverlay').style.display = 'flex';
     }
 };
 

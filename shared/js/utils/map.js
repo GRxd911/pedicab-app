@@ -1,147 +1,137 @@
-
-/**
- * Map Utility - Handles Leaflet map initialization and real-time tracking
- * Uses FREE Leaflet + CartoDB tiles + Leaflet Routing Machine
- */
-
 import { calculateDistance } from '../services/location.js';
 
-let map = null;
-let markers = {};
-let routeControl = null;
-let currentRoute = null;
+// Multi-Map Registry: Holds all active map instances
+// Format: { containerId: { map, markers, routeControl } }
+let instances = {};
 
 /**
- * Initialize map with Leaflet and CartoDB tiles
+ * Initialize a map instance (Multi-instance support)
  */
-export function initMap(containerId, center = { lat: 10.3157, lng: 123.8854 }, zoom = 13) {
-    // Remove existing map if any
-    if (map) {
-        try {
-            clearRoute();
-            map.remove();
-        } catch (e) {
-            console.warn("Safety map removal failed:", e);
+export function initMap(containerId, center = { lat: 9.3068, lng: 123.3033 }, zoom = 15) {
+    // If this specific container already has a map, just re-center and return it
+    if (instances[containerId]) {
+        const inst = instances[containerId];
+        if (inst.map) {
+            inst.map.setView([center.lat, center.lng], zoom);
+            setTimeout(() => inst.map.invalidateSize(), 150);
+            return inst.map;
         }
-        markers = {};
     }
 
-    // Create map
-    map = L.map(containerId, {
+    // Create a brand new independent map instance
+    const map = L.map(containerId, {
         zoomControl: true,
-        attributionControl: true
+        attributionControl: true,
+        fadeAnimation: true
     }).setView([center.lat, center.lng], zoom);
 
-    // Switch to OSM to bypass CartoDB cache failures
+    // Use OSM tiles for reliability
     L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
         crossOrigin: true
     }).addTo(map);
 
-    // Add smooth marker transition CSS
-    if (!document.getElementById('map-marker-vitals')) {
+    // Add CSS for smooth transitions
+    if (!document.getElementById('map-sync-engine-styles')) {
         const style = document.createElement('style');
-        style.id = 'map-marker-vitals';
+        style.id = 'map-sync-engine-styles';
         style.innerHTML = `
-            .leaflet-marker-icon {
-                transition: transform 0.8s linear, opacity 0.3s ease;
-            }
-            .custom-marker {
-                transition: all 0.8s linear;
-            }
+            .leaflet-marker-icon { transition: transform 0.8s linear, opacity 0.3s ease; }
+            .custom-marker { transition: all 0.8s linear; }
         `;
         document.head.appendChild(style);
     }
+
+    // Register this instance
+    instances[containerId] = {
+        map: map,
+        markers: {},
+        routeControl: null
+    };
 
     return map;
 }
 
 /**
- * Add a marker to the map
+ * Add a marker - Automatically syncs across ALL active map instances
  */
 export function addMarker(id, lat, lng, options = {}) {
-    // Remove existing marker if it exists
-    if (markers[id]) {
-        map.removeLayer(markers[id]);
-    }
-
-    // Create custom icon if specified
-    let icon = null;
-    if (options.icon) {
-        // Standardize anchors: Use [20, 20] for circular icons, [20, 40] for pin icons
-        const anchor = options.anchor || [20, 20];
-        icon = L.divIcon({
-            className: 'custom-marker',
-            html: options.icon,
-            iconSize: [40, 40],
-            iconAnchor: anchor,
-            popupAnchor: [0, -anchor[1] / 2] // Dynamic popup offset
-        });
-    }
-
     const nLat = Number(lat);
     const nLng = Number(lng);
-    if (isNaN(nLat) || isNaN(nLng)) return null;
 
-    // Create marker
-    const marker = L.marker([nLat, nLng], {
-        icon: icon,
-        title: options.title || ''
-    }).addTo(map);
-
-    // Add popup if specified
-    if (options.popup) {
-        marker.bindPopup(options.popup);
+    // 🛑 BLOCK OCEAN BUG: Ignore invalid coordinates like 0,0 during initialization
+    if (isNaN(nLat) || isNaN(nLng) || (nLat === 0 && nLng === 0)) {
+        console.warn(`⚠️ Ignoring invalid coordinates for marker ${id}:`, lat, lng);
+        return;
     }
 
-    // Store marker
-    markers[id] = marker;
+    Object.keys(instances).forEach(cid => {
+        const inst = instances[cid];
 
-    return marker;
-}
+        // Remove existing marker for this ID on this specific map
+        if (inst.markers[id]) {
+            inst.map.removeLayer(inst.markers[id]);
+        }
 
-export function updateMarkerPosition(id, lat, lng, icon = null, options = {}) {
-    if (markers[id]) {
-        const nLat = Number(lat);
-        const nLng = Number(lng);
-
-        if (isNaN(nLat) || isNaN(nLng)) return false;
-
-        markers[id].setLatLng([nLat, nLng]);
-
-        if (icon) {
+        let icon = null;
+        if (options.icon) {
             const anchor = options.anchor || [20, 20];
-            markers[id].setIcon(L.divIcon({
+            icon = L.divIcon({
                 className: 'custom-marker',
-                html: icon,
+                html: options.icon,
                 iconSize: [40, 40],
                 iconAnchor: anchor,
                 popupAnchor: [0, -anchor[1] / 2]
-            }));
+            });
         }
-        // Force Leaflet to recalculate its container bounds to prevent "shifted" map tiles/markers
-        if (map) map.invalidateSize();
-        return true;
-    } else if (icon) {
-        return addMarker(id, lat, lng, { icon, ...options });
-    }
-    return false;
+
+        const marker = L.marker([nLat, nLng], {
+            icon: icon,
+            title: options.title || ''
+        }).addTo(inst.map);
+
+        if (options.popup) marker.bindPopup(options.popup);
+        inst.markers[id] = marker;
+    });
 }
 
 /**
- * Remove marker from map
+ * Updates marker - Syncs across all active maps
  */
-export function removeMarker(id) {
-    if (markers[id]) {
-        map.removeLayer(markers[id]);
-        delete markers[id];
-    }
+export function updateMarkerPosition(id, lat, lng, icon = null, options = {}) {
+    const nLat = Number(lat);
+    const nLng = Number(lng);
+
+    // 🛑 BLOCK OCEAN BUG: Ignore invalid updates
+    if (isNaN(nLat) || isNaN(nLng) || (nLat === 0 && nLng === 0)) return;
+
+    Object.keys(instances).forEach(cid => {
+        const inst = instances[cid];
+        if (inst.markers[id]) {
+            inst.markers[id].setLatLng([nLat, nLng]);
+            if (icon) {
+                const anchor = options.anchor || [20, 20];
+                inst.markers[id].setIcon(L.divIcon({
+                    className: 'custom-marker',
+                    html: icon,
+                    iconSize: [40, 40],
+                    iconAnchor: anchor,
+                    popupAnchor: [0, -anchor[1] / 2]
+                }));
+            }
+            // Robust resize whenever movement occurs
+            inst.map.invalidateSize();
+        } else if (icon) {
+            addMarker(id, lat, lng, { icon, ...options });
+        }
+    });
 }
 
 /**
- * Add driver marker (car icon)
+ * Specialized Markers (Required for controller logic)
  */
+
 export function addDriverMarker(driverId, lat, lng, driverName = 'Driver') {
     const icon = `
         <div class="driver-marker-premium">
@@ -151,7 +141,6 @@ export function addDriverMarker(driverId, lat, lng, driverName = 'Driver') {
             </div>
         </div>
     `;
-
     return addMarker(`driver-${driverId}`, lat, lng, {
         icon: icon,
         title: driverName,
@@ -159,16 +148,12 @@ export function addDriverMarker(driverId, lat, lng, driverName = 'Driver') {
     });
 }
 
-/**
- * Add passenger marker (person icon)
- */
 export function addPassengerMarker(passengerId, lat, lng, passengerName = 'Passenger') {
     const icon = `
         <div style="background: #4f46e5; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); transform: translateY(-5px);">
             <i class='bx bxs-user' style="color: white; font-size: 22px;"></i>
         </div>
     `;
-
     return addMarker(`passenger-${passengerId}`, lat, lng, {
         icon: icon,
         title: passengerName,
@@ -176,45 +161,38 @@ export function addPassengerMarker(passengerId, lat, lng, passengerName = 'Passe
     });
 }
 
-/**
- * Add ride request marker for drivers (with Accept/Decline in popup)
- */
+export function addDestinationMarker(lat, lng, address = 'Destination') {
+    const icon = `
+        <div style="background: #ef4444; width: 44px; height: 44px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg) translateY(-8px); display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3);">
+            <i class='bx bxs-flag-alt' style="color: white; font-size: 22px; transform: rotate(45deg);"></i>
+        </div>
+    `;
+    return addMarker('destination', lat, lng, {
+        icon: icon,
+        anchor: [20, 40],
+        title: address,
+        popup: `<b>Dropoff</b><br>${address}`
+    });
+}
+
 export function addRideRequestMarker(ride, passengerName = 'Passenger') {
     const icon = `
         <div style="background: #4f46e5; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); transform: translateY(-5px);">
             <i class='bx bxs-user' style="color: white; font-size: 22px;"></i>
         </div>
     `;
-
     const pickup = (ride.pickup_location || 'Unknown').replace(/'/g, "\\'");
     const dropoff = (ride.dropoff_location || 'Unknown').replace(/'/g, "\\'");
-
     const popupHtml = `
-        <div style="min-width: 200px; font-family: 'Outfit', sans-serif; padding: 10px; text-align: center;">
-            <div style="margin-bottom: 12px;">
-                <b style="font-size: 16px; color: #1e293b; display: block;">${passengerName}</b>
-                <div style="font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.4;">
-                    <i class='bx bxs-map-pin' style="color: #10b981;"></i> ${ride.pickup_location}<br>
-                    <i class='bx bxs-flag-alt' style="color: #ef4444;"></i> ${ride.dropoff_location}
-                </div>
-            </div>
-            <div style="background: #f8fafc; padding: 8px; border-radius: 12px; color: #4f46e5; font-weight: 800; font-size: 18px; margin-bottom: 15px; border: 1px dashed #e2e8f0;">
-                ₱${parseFloat(ride.price).toFixed(2)}
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="window.declineRide(${ride.ride_id})" 
-                    style="flex: 1; background: #fee2e2; color: #dc2626; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s;">
-                    Decline
-                </button>
-                <button onclick="window.acceptRide(${ride.ride_id}, '${pickup}', '${dropoff}')" 
-                    style="flex: 1.5; background: #10b981; color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s;">
-                    Accept
-                </button>
-            </div>
+        <div style="min-width: 200px; padding: 10px; text-align: center;">
+            <b>${passengerName}</b><br>
+            ₱${parseFloat(ride.price).toFixed(2)}<br>
+            <button onclick="window.acceptRide(${ride.ride_id}, '${pickup}', '${dropoff}')" 
+                style="background: #10b981; color: white; border: none; padding: 8px; border-radius: 8px; cursor: pointer; margin-top: 10px;">
+                Accept
+            </button>
         </div>
     `;
-
-    // Use passenger_id for the ID to ensure it overwrites standard passenger markers
     return addMarker(`passenger-${ride.passenger_id || ride.ride_id}`, ride.pickup_lat, ride.pickup_lng, {
         icon: icon,
         title: passengerName,
@@ -222,268 +200,138 @@ export function addRideRequestMarker(ride, passengerName = 'Passenger') {
     });
 }
 
-/**
- * Add destination marker (flag icon)
- */
-export function addDestinationMarker(lat, lng, address = 'Destination') {
-    const icon = `
-        <div style="background: #ef4444; width: 44px; height: 44px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg) translateY(-8px); display: flex; align-items: center; justify-content: center; border: 4px solid #ffffff; box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3);">
-            <i class='bx bxs-flag-alt' style="color: white; font-size: 22px; transform: rotate(45deg);"></i>
-        </div>
-    `;
-
-    return addMarker('destination', lat, lng, {
-        icon: icon,
-        anchor: [20, 40], // Pins point down, so anchor at bottom center
-        title: address,
-        popup: `<b>Dropoff</b><br>${address}`
-    });
-}
-
-/**
- * Add SOS emergency marker (pulsing red)
- */
 export function addSOSMarker(emergencyId, lat, lng, userName = 'Emergency') {
     const icon = `
         <div style="background: #dc2626; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 0 20px rgba(220, 38, 38, 0.8); animation: sosPulse 1s infinite;">
             <i class='bx bxs-error-alt' style="color: white; font-size: 28px;"></i>
         </div>
     `;
-
-    const marker = addMarker(`sos-${emergencyId}`, lat, lng, {
+    return addMarker(`sos-${emergencyId}`, lat, lng, {
         icon: icon,
         title: `SOS - ${userName}`,
-        popup: `<b style="color: #dc2626;">🚨 EMERGENCY SOS</b><br>${userName}<br><a href="tel:911">Call 911</a>`
+        popup: `<b style="color: #dc2626;">🚨 EMERGENCY SOS</b><br>${userName}`
     });
-
-    // Auto-open popup for SOS
-    marker.openPopup();
-
-    return marker;
 }
 
 /**
- * Draw route between two points using Leaflet Routing Machine
+ * Routing Engine (Synchronized)
  */
-export function drawRoute(startLat, startLng, endLat, endLng, options = {}) {
-    const lat1 = Number(startLat);
-    const lng1 = Number(startLng);
-    const lat2 = Number(endLat);
-    const lng2 = Number(endLng);
 
-    if (isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2)) {
-        console.warn("⚠️ Invalid coordinates for drawRoute:", { startLat, startLng, endLat, endLng });
-        return null;
-    }
-
-    const waypoints = [
-        L.latLng(lat1, lng1),
-        L.latLng(lat2, lng2)
-    ];
-
-    const isNewColor = options.color && routeControl && routeControl.options.lineOptions.styles[1].color !== options.color;
-
-    if (routeControl && !isNewColor) {
-        try {
-            routeControl.setWaypoints(waypoints);
-            return routeControl;
-        } catch (e) {
-            console.warn("⚠️ Route update failed, recreating:", e);
-            clearRoute();
-        }
-    } else if (routeControl) {
-        clearRoute(); // Clear if color changed or update failed
-    }
-
-    // Create new routing control
-    routeControl = L.Routing.control({
-        waypoints: waypoints,
-        routeWhileDragging: false,
-        addWaypoints: false,
-        draggableWaypoints: false,
-        fitSelectedRoutes: false,
-        showAlternatives: false,
-        show: false,
-        itinerary: { show: false },
-        lineOptions: {
-            styles: [
-                { color: '#1e1b4b', opacity: 0.1, weight: 12 },
-                { color: options.color || '#4f46e5', opacity: 1, weight: 8 }
-            ]
-        },
-        createMarker: function () { return null; },
-        router: L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1'
-        })
-    }).addTo(map);
-
-    // Listen for route found
-    routeControl.on('routesfound', function (e) {
-        const routes = e.routes;
-        if (routes && routes.length > 0) {
-            currentRoute = routes[0];
-            if (options.onRouteFound) {
-                options.onRouteFound({
-                    distance: currentRoute.summary.totalDistance,
-                    duration: currentRoute.summary.totalTime
-                });
-            }
-        }
-    });
-
-    return routeControl;
-}
-
-/**
- * Draw multi-point route (driver -> pickup -> dropoff)
- */
 export function drawMultiPointRoute(points, options = {}) {
-    const cleanPoints = points.filter(p => p && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)));
-    if (cleanPoints.length < 2) return null;
+    Object.keys(instances).forEach(cid => {
+        const inst = instances[cid];
+        const cleanPoints = points.filter(p => p && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)));
+        if (cleanPoints.length < 2) return;
 
-    const waypoints = cleanPoints.map(p => L.latLng(Number(p.lat), Number(p.lng)));
+        if (inst.routeControl) inst.map.removeControl(inst.routeControl);
 
-    const isNewColor = options.color && routeControl && routeControl.options.lineOptions.styles[1].color !== options.color;
+        const waypoints = cleanPoints.map(p => L.latLng(Number(p.lat), Number(p.lng)));
+        inst.routeControl = L.Routing.control({
+            waypoints: waypoints,
+            show: false,
+            itinerary: { show: false },
+            createMarker: () => null,
+            lineOptions: {
+                styles: [{ color: options.color || '#10b981', opacity: 0.8, weight: 6 }]
+            },
+            router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' })
+        }).addTo(inst.map);
 
-    if (routeControl && !isNewColor) {
-        try {
-            // ALWAYS update the listener to ensure latest callback is used
-            routeControl.off('routesfound');
-            routeControl.on('routesfound', function (e) {
-                const routes = e.routes;
-                if (routes && routes.length > 0 && options.onRouteFound) {
-                    currentRoute = routes[0];
-                    options.onRouteFound({
-                        distance: currentRoute.summary.totalDistance,
-                        duration: currentRoute.summary.totalTime
-                    });
-                }
+        inst.routeControl.on('routesfound', (e) => {
+            if (options.onRouteFound) options.onRouteFound({
+                distance: e.routes[0].summary.totalDistance,
+                duration: e.routes[0].summary.totalTime
             });
+        });
+    });
+}
 
-            routeControl.setWaypoints(waypoints);
-            return routeControl;
-        } catch (e) {
-            console.warn("⚠️ Multi-route update failed, recreating:", e);
-            clearRoute();
-        }
-    } else if (routeControl) {
-        clearRoute();
-    }
+export function drawRoute(sLat, sLng, eLat, eLng, options = {}) {
+    return drawMultiPointRoute([{ lat: sLat, lng: sLng }, { lat: eLat, lng: eLng }], options);
+}
 
-    routeControl = L.Routing.control({
-        waypoints: waypoints,
-        routeWhileDragging: false,
-        addWaypoints: false,
-        draggableWaypoints: false,
-        fitSelectedRoutes: false,
-        showAlternatives: false,
-        show: false,
-        itinerary: { show: false },
-        lineOptions: {
-            styles: [
-                { color: '#064e3b', opacity: 0.1, weight: 12 },
-                { color: options.color || '#10b981', opacity: 1, weight: 8 }
-            ]
-        },
-        createMarker: function () { return null; },
-        router: L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1'
-        })
-    }).addTo(map);
-
-    routeControl.on('routesfound', function (e) {
-        const routes = e.routes;
-        if (routes && routes.length > 0 && options.onRouteFound) {
-            currentRoute = routes[0];
-            options.onRouteFound({
-                distance: currentRoute.summary.totalDistance,
-                duration: currentRoute.summary.totalTime
-            });
+export function clearRoute() {
+    Object.keys(instances).forEach(cid => {
+        if (instances[cid].routeControl) {
+            instances[cid].map.removeControl(instances[cid].routeControl);
+            instances[cid].routeControl = null;
         }
     });
-
-    return routeControl;
 }
 
 /**
- * Clear route from map
+ * Global Utility Functions
  */
-export function clearRoute() {
-    if (routeControl) {
-        try {
-            if (map && map.hasLayer) {
-                map.removeControl(routeControl);
-            }
-        } catch (e) {
-            console.warn("Safe route removal:", e);
-        }
-        routeControl = null;
-        currentRoute = null;
-    }
-}
 
 /**
- * Fit map to show all markers (Smartly)
+ * Fit bounds - Each map fits its own markers independently
+ * 🛡️ HARDENED: Strictly ignores invalid coordinates (0,0) to prevent Ocean Bug
  */
 export function fitBounds() {
-    if (!map) return;
-    const markerArray = Object.values(markers);
-    if (markerArray.length === 0) return;
+    Object.keys(instances).forEach(cid => {
+        const inst = instances[cid];
 
-    if (markerArray.length === 1) {
-        // Only re-center if marker is NOT in view
-        if (!map.getBounds().contains(markerArray[0].getLatLng())) {
-            map.setView(markerArray[0].getLatLng(), 16, { animate: true });
+        // Filter out any markers at 0,0 or invalid locations
+        const validMarkers = Object.values(inst.markers).filter(m => {
+            const ll = m.getLatLng();
+            return ll && ll.lat !== 0 && ll.lng !== 0;
+        });
+
+        if (validMarkers.length === 0) return;
+
+        // Force multi-stage resize to fix Gray Box issue
+        const wakeUp = () => inst.map.invalidateSize();
+        wakeUp();
+        setTimeout(wakeUp, 500);
+        setTimeout(wakeUp, 1000);
+
+        if (validMarkers.length === 1) {
+            inst.map.setView(validMarkers[0].getLatLng(), 16, { animate: true });
+        } else {
+            const group = L.featureGroup(validMarkers);
+            const bounds = group.getBounds();
+
+            // Safety check: if bounds are too wide (ocean bug), center on first valid point
+            if (bounds.getNorthWest().distanceTo(bounds.getSouthEast()) > 500000) { // > 500km
+                inst.map.setView(validMarkers[0].getLatLng(), 16);
+            } else {
+                inst.map.fitBounds(bounds.pad(0.3), { maxZoom: 16, animate: true });
+            }
         }
-    } else {
-        const group = L.featureGroup(markerArray);
-        const bounds = group.getBounds();
-
-        // Only fit bounds if markers are moving outside the current view
-        // OR if the current view is way too zoomed in/out
-        const currentBounds = map.getBounds();
-        const padding = 0.3;
-
-        if (!currentBounds.contains(bounds.pad(0.1))) {
-            map.fitBounds(bounds.pad(padding), {
-                maxZoom: 16,
-                animate: true,
-                duration: 0.8
-            });
-        }
-    }
+    });
 }
 
-/**
- * Center map on specific location
- */
 export function centerMap(lat, lng, zoom = 15) {
-    map.setView([lat, lng], zoom);
+    Object.keys(instances).forEach(cid => {
+        instances[cid].map.setView([lat, lng], zoom);
+    });
 }
 
-/**
- * Get current map instance
- */
-export function getMap() {
-    return map;
+export function removeMarker(id) {
+    Object.keys(instances).forEach(cid => {
+        if (instances[cid].markers[id]) {
+            instances[cid].map.removeLayer(instances[cid].markers[id]);
+            delete instances[cid].markers[id];
+        }
+    });
 }
 
-/**
- * Clear all markers
- */
 export function clearAllMarkers() {
-    Object.keys(markers).forEach(id => removeMarker(id));
+    Object.keys(instances).forEach(cid => {
+        Object.keys(instances[cid].markers).forEach(id => {
+            instances[cid].map.removeLayer(instances[cid].markers[id]);
+        });
+        instances[cid].markers = {};
+    });
 }
 
-/**
- * Destroy map
- */
-export function destroyMap() {
-    if (map) {
-        map.remove();
-        map = null;
-        markers = {};
-        routeControl = null;
-        currentRoute = null;
+export function destroyMap(containerId) {
+    if (instances[containerId]) {
+        instances[containerId].map.remove();
+        delete instances[containerId];
     }
+}
+
+export function getMap(containerId) {
+    return instances[containerId] ? instances[containerId].map : null;
 }

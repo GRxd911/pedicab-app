@@ -50,6 +50,22 @@ export async function getDailyEarnings(userId) {
     return { count, total };
 }
 
+export async function getWeeklyEarnings(userId) {
+    const now = new Date();
+    const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+
+    const { data: weekRides, error } = await supabaseClient
+        .from('rides')
+        .select('price')
+        .eq('driver_id', userId)
+        .eq('status', 'completed')
+        .gte('request_time', weekAgo.toISOString());
+
+    if (error || !weekRides) return { total: 0 };
+    const total = weekRides.reduce((sum, r) => sum + parseFloat(r.price || 0), 0);
+    return { total };
+}
+
 export async function getRecentHistory(userId) {
     const { data: recentTrips } = await supabaseClient
         .from('rides')

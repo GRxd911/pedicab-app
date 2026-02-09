@@ -173,40 +173,67 @@ export async function geocodeAddress(address) {
 }
 
 /**
- * Get address suggestions for autocomplete
+ * Get address suggestions with acronym support and location-based priority
  */
 export async function getAddressSuggestions(query, userLat = null, userLng = null) {
-    if (!query || query.length < 2) return [];
+    if (!query || query.length < 1) return [];
 
     try {
+        let searchQuery = query.trim();
+        const upperQuery = searchQuery.toUpperCase();
+
+        // 🏫 SMART ALIAS DICTIONARY: Handle common acronyms instantly
+        const aliases = {
+            'SUMC': 'Silliman University Medical Center',
+            'NORSU': 'Negros Oriental State University',
+            'Silliman': 'Silliman University',
+            'SU': 'Silliman University',
+            'SM': 'SM Mall',
+            'UP': 'University of the Philippines',
+            'MSU': 'Mindanao State University',
+            'UST': 'University of Santo Tomas',
+            'DLSU': 'De La Salle University',
+            'ADMU': 'Ateneo de Manila University',
+            'Rob': 'Robinsons Place',
+            'Robs': 'Robinsons Place'
+        };
+
+        if (aliases[upperQuery]) {
+            searchQuery = aliases[upperQuery];
+        } else {
+            // Check if it starts with an alias (e.g., "SM C")
+            for (const key in aliases) {
+                if (upperQuery.startsWith(key + ' ')) {
+                    searchQuery = upperQuery.replace(key, aliases[key]);
+                    break;
+                }
+            }
+        }
+
         // Build priority parameters
         let locationParams = '';
         if (userLat && userLng) {
-            // 1. proximity: biases search center
-            locationParams += `&lat=${userLat}&lon=${userLng}`;
-
-            // 2. viewbox: effectively boosts local results (approx 50km box)
-            const delta = 0.4; // roughly 40-50km
+            // Priority viewbox helps the map server find things near the user first
+            const delta = 0.5; // Roughly 50km radius
             const left = userLng - delta;
             const top = userLat + delta;
             const right = userLng + delta;
             const bottom = userLat - delta;
-            locationParams += `&viewbox=${left},${top},${right},${bottom}&bounded=0`;
+            locationParams += `&lat=${userLat}&lon=${userLng}&viewbox=${left},${top},${right},${bottom}&bounded=0`;
         }
 
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`
         );
         const data = await response.json();
 
-        const results = data.map(item => {
+        return data.map(item => {
             const addr = item.address;
             let display = item.display_name;
 
-            // Priority list for names
             const buildingName = addr.university || addr.school || addr.college ||
                 addr.amenity || addr.building || addr.office ||
-                addr.shop || addr.tourism || addr.historic || addr.mall;
+                addr.shop || addr.tourism || addr.historic || addr.mall || addr.hospital;
 
             if (buildingName) {
                 const road = addr.road || addr.suburb || addr.neighbourhood || '';
@@ -218,7 +245,6 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
             const lat = parseFloat(item.lat);
             const lng = parseFloat(item.lon);
 
-            // Calculate distance for sorting if user location is known
             let distance = 0;
             if (userLat && userLng) {
                 distance = calculateDistance(userLat, userLng, lat, lng);
@@ -228,16 +254,10 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
                 displayName: display,
                 lat: lat,
                 lng: lng,
-                distance: distance // Store distance for sorting
+                distance: distance
             };
-        });
+        }).sort((a, b) => a.distance - b.distance);
 
-        // 🟢 SORT BY DISTANCE (Nearest first)
-        if (userLat && userLng) {
-            results.sort((a, b) => a.distance - b.distance);
-        }
-
-        return results;
     } catch (error) {
         console.error('Autocomplete error:', error);
         return [];

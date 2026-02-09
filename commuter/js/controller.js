@@ -356,6 +356,24 @@ async function startTrackingDriver(driverId, ride) {
             handleLocationUpdate(payload.new);
         })
         .subscribe();
+
+    // REAL-TIME: Listen for new messages (Badge Indicator)
+    if (window.chatNotifChannel) supabaseClient.removeChannel(window.chatNotifChannel);
+    window.chatNotifChannel = supabaseClient
+        .channel(`chat-notif-${ride.ride_id}`)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `ride_id=eq.${ride.ride_id}`
+        }, payload => {
+            if (payload.new.sender_id !== currentUser.id && chatRideId !== ride.ride_id) {
+                const badge = document.getElementById('chat-notif-badge');
+                if (badge) badge.style.display = 'block';
+                AudioService.playNotification();
+            }
+        })
+        .subscribe();
 }
 
 async function setupRideMap(ride) {
@@ -548,6 +566,11 @@ function stopTrackingDriver() {
         driverLocationInterval = null;
     }
 
+    if (window.chatNotifChannel) {
+        supabaseClient.removeChannel(window.chatNotifChannel);
+        window.chatNotifChannel = null;
+    }
+
     if (locationWatchId) {
         locationWatchId = null;
     }
@@ -585,19 +608,22 @@ function initTrackingMap(ride, driver) {
     const container = document.getElementById('tracking-map');
     if (!container) return;
 
-    // Prevent re-initialization if map already exists and context matches
-    if (trackingMap) {
-        trackingMap.remove();
-        trackingMap = null;
-    }
-
     try {
-        console.log("📍 Initializing Passenger Tracking Map...");
-        // Default center (will be overridden by fitBounds)
-        const lat = ride.pickup_lat || 9.3068;
-        const lng = ride.pickup_lng || 123.3033;
-
-        trackingMap = initMap('tracking-map', { lat, lng }, 15);
+        // Prevent re-initialization if map already exists and is attached to the right container
+        if (trackingMap && trackingMap.getContainer().id === 'tracking-map') {
+            // Just force a resize and update markers instead of rebuilding
+            setTimeout(() => trackingMap.invalidateSize(), 150);
+        } else {
+            if (trackingMap) {
+                try { trackingMap.remove(); } catch (e) { }
+                trackingMap = null;
+            }
+            console.log("📍 Initializing New Passenger Tracking Map...");
+            // Default center (will be overridden by fitBounds)
+            const lat = ride.pickup_lat || 9.3068;
+            const lng = ride.pickup_lng || 123.3033;
+            trackingMap = initMap('tracking-map', { lat, lng }, 15);
+        }
 
         // Add Route Markers
         if (ride.pickup_lat && ride.pickup_lng) {
@@ -636,6 +662,11 @@ function initTrackingMap(ride, driver) {
             fitBounds();
         }
 
+        // FORCE REDRAW FIX: Many browsers fail to render hidden maps correctly.
+        // Multiple staged invalidations ensure the map eventually renders correctly.
+        setTimeout(() => { if (trackingMap) trackingMap.invalidateSize(); }, 300);
+        setTimeout(() => { if (trackingMap) trackingMap.invalidateSize(); }, 1000);
+
     } catch (e) {
         console.warn("Tracking map init failed:", e);
     }
@@ -665,8 +696,9 @@ function updateAcceptedUI(ride, driver) {
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px;">
-                <button onclick="window.openChat(${ride.ride_id}, '${driver?.fullname || 'Driver'}')" class="btn" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 13px; height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <button onclick="window.openChat(${ride.ride_id}, '${driver?.fullname || 'Driver'}')" class="btn" style="position: relative; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 13px; height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px;">
                     <i class='bx bxs-chat'></i> Chat
+                    <div id="chat-notif-badge" style="display: none; position: absolute; top: 6px; right: 10px; width: 10px; height: 10px; background: #ef4444; border: 2px solid white; border-radius: 50%;"></div>
                 </button>
                 ${driver?.phone ? `<a href="tel:${driver.phone}" class="btn" style="width: 44px; height: 44px; background: #10b981; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 12px; color: white;"><i class='bx bxs-phone'></i></a>` : ''}
                 <button onclick="window.triggerEmergency(${ride.ride_id})" class="btn" style="width: 44px; height: 44px; background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; display: flex; align-items: center; justify-content: center; border-radius: 12px;"><i class='bx bxs-megaphone'></i></button>
@@ -900,6 +932,11 @@ window.openChat = (rideId, driverName) => {
     chatRideId = rideId;
     document.getElementById('chat-driver-name').innerText = driverName || 'Driver';
     elements.chatOverlay.style.display = 'flex';
+
+    // Clear the notification badge
+    const badge = document.getElementById('chat-notif-badge');
+    if (badge) badge.style.display = 'none';
+
     loadChatMessages();
 
     // Switch to Hybrid Real-time Chat
@@ -1402,35 +1439,34 @@ window.switchTab = (tab) => {
         if (el) el.classList.remove('active');
     });
 
-    // Reset active map ref to force re-init on new tab
-    if (tab === 'home' || tab === 'map') {
-        passengerMap = null;
-    }
+    // Reset active map ref to force re-init on new tab is removed to prevent gray blank maps
 
     if (tab === 'home' && homeView) {
         homeView.style.display = 'block';
         if (navHome) navHome.classList.add('active');
         checkActiveRide(); // This will trigger initPassengerMap with 'passenger-map'
-        // FIX: Force map resize when switching back to home to prevent gray box
+        // FIX: Force ALL maps to "Wake Up" and fill their containers
         setTimeout(() => {
-            if (passengerMap) passengerMap.invalidateSize();
+            // Trigger the Sync Utility's broadcast resize
+            fitBounds();
+
             // Re-init tracking map to ensure it renders if we have an active ride
-            if (activeTrackingRide && activeTrackingRide.status === 'accepted') {
-                // Pass minimal driver object if needed, or fetch fresh
-                const d = {
-                    driver_id: activeTrackingRide.driver_id,
-                    current_lat: activeTrackingRide.driver_lat, // fallback
-                    current_lng: activeTrackingRide.driver_lng
-                };
-                // Try to use existing driver data if available, or just init with ride data
-                initTrackingMap(activeTrackingRide, d);
+            if (activeTrackingRide && (activeTrackingRide.status === 'accepted' || activeTrackingRide.status === 'in_progress')) {
+                checkActiveRide();
             }
-        }, 100);
-    } else if (tab === 'map' && mapView) { // Assuming 'activityView' was a typo and it should be 'mapView'
+        }, 150);
+    } else if (tab === 'map' && mapView) {
         mapView.style.display = 'block';
         if (header) header.style.display = 'none';
         if (navMap) navMap.classList.add('active');
+
+        // Allow exploration map to init/update
         initExplorationMap();
+
+        // FORCE REDRAW FIX: Trigger broadcast resize to fill the container
+        setTimeout(() => {
+            fitBounds();
+        }, 150);
     } else if (tab === 'history') {
         if (homeView) homeView.style.display = 'block';
         if (header) header.style.display = 'none';
