@@ -183,7 +183,7 @@ function toRad(degrees) {
 export async function geocodeAddress(address) {
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Dumaguete City, Philippines')}&limit=1&email=pedicab_demo@example.com`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Dumaguete City, Philippines')}&limit=1`
         );
         const data = await response.json();
 
@@ -224,7 +224,7 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
         }
 
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1&email=pedicab_demo@example.com`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}${locationParams}&countrycodes=ph&limit=10&addressdetails=1`
         );
         const data = await response.json();
 
@@ -235,7 +235,7 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
             // Priority list for names
             const buildingName = addr.university || addr.school || addr.college ||
                 addr.amenity || addr.building || addr.office ||
-                addr.shop || addr.tourism || addr.historic;
+                addr.shop || addr.tourism || addr.historic || addr.mall;
 
             if (buildingName) {
                 const road = addr.road || addr.suburb || addr.neighbourhood || '';
@@ -279,7 +279,7 @@ export async function getAddressSuggestions(query, userLat = null, userLng = nul
 export async function reverseGeocode(lat, lng) {
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&email=pedicab_demo@example.com`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
         );
         const data = await response.json();
 
@@ -296,19 +296,17 @@ export async function reverseGeocode(lat, lng) {
                 return road ? `${placeName}, ${road}` : placeName;
             }
 
-            // FALLBACK 1: Road & Suburb/Town
+            // FALLBACK 1: Road & Area
             if (addr.road) {
-                const area = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.municipality || '';
+                const area = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.village || '';
                 return area ? `${addr.road}, ${area}` : addr.road;
             }
 
-            // FALLBACK 2: Full Display Name
             return data.display_name;
         }
     } catch (error) {
         console.error('Reverse geocoding error:', error);
     }
 
-    // NEVER show raw numbers to driver
-    return "Current Location";
+    return null;
 }
