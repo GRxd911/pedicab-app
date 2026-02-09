@@ -4,7 +4,7 @@
     "description": "Pedicab Driver Decision Fatigue Support System",
     "main": "index.html",
     "scripts": {
-        "start": "browser-sync start --server --files \"css/*.css, pages/*.html, *.html\" --index \"signin.html\"",
+        "start": "browser-sync start --server --files \"**/*.css, **/*.html, **/*.js\" --index \"index.html\"",
         "build": "echo 'Static site build complete'"
     },
     "devDependencies": {
