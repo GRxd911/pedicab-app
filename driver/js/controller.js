@@ -437,6 +437,9 @@ async function showNavigationRoute(ride) {
 
 // --- GLOBAL EXPORTS ---
 
+window.previewAvatar = previewAvatar;
+
+
 window.toggleStatus = async () => {
     const btn = document.getElementById('online-toggle');
     if (!btn) return;
