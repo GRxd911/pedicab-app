@@ -680,10 +680,10 @@ function updateAcceptedUI(ride, driver) {
         <!-- 1. Driver Info Card -->
         <div class="request-card" style="border: 2px solid #10b981; padding: 15px; border-radius: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                <div class="driver-avatar" style="width: 50px; height: 50px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #f0fdf4; overflow: hidden;">
+                <div class="driver-avatar" style="width: 52px; height: 52px; min-width: 52px; min-height: 52px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #f0fdf4; overflow: hidden; flex-shrink: 0;">
                     ${driver?.avatar_url
             ? `<img src="${driver.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`
-            : `<i class='bx bxs-user' style="font-size: 24px; color: #10b981;"></i>`
+            : `<i class='bx bxs-user' style="font-size: 26px; color: #10b981;"></i>`
         }
                 </div>
                 <div style="flex: 1;">

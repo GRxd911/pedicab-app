@@ -193,18 +193,23 @@ async function renderPendingRides(rides) {
 
         const card = document.createElement('div');
         card.className = 'request-notification';
+
+        const avatarHtml = userData.avatar_url
+            ? `<img src="${userData.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">`
+            : `<i class='bx bxs-user'></i>`;
+
         card.innerHTML = `
             <div class="notification-header">
                 <span class="tag-new">NEW REQUEST</span>
                 <span style="font-size: 12px; font-weight: 700; color: var(--secondary);">${ride.price > 0 ? `₱${ride.price}` : 'Fare N/A'}</span>
             </div>
-            <div class="req-details">
-                <div class="req-avatar">
-                   <i class='bx bxs-user'></i>
+            <div class="req-details" style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                <div class="req-avatar" style="width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f1f5f9; flex-shrink: 0; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); aspect-ratio: 1/1;">
+                   ${avatarHtml}
                 </div>
-                <div>
+                <div style="flex: 1; min-width: 0;">
                     <h4 style="font-size: 14px;">${passengerName}</h4>
-                    <p style="font-size: 12px; color: var(--text-muted);">${ride.pickup_location} → ${ride.dropoff_location}</p>
+                    <p style="font-size: 12px; color: var(--text-muted); line-height: 1.2;">${ride.pickup_location} → ${ride.dropoff_location}</p>
                 </div>
             </div>
             <div class="btn-group">
@@ -714,6 +719,13 @@ window.closeEditProfile = (e) => {
 };
 
 window.saveProfile = async () => {
+    // Refresh session to ensure we have the latest auth state
+    const session = await DriverService.getSession();
+    if (!session) {
+        return await showAlert('Session Expired', 'Your session has expired. Please sign in again.', 'error');
+    }
+    currentUser = session.user;
+
     const name = document.getElementById('edit-fullname').value;
     const phone = document.getElementById('edit-phone').value;
     const color = document.getElementById('edit-color').value;
@@ -728,20 +740,17 @@ window.saveProfile = async () => {
     try {
         let avatarUrl = currentUser.user_metadata?.avatar_url;
         if (avatarFile) {
+            console.log('Uploading new avatar...');
             avatarUrl = await DriverService.uploadAvatar(currentUser.id, avatarFile);
         }
 
-        await DriverService.updateProfile(currentUser.id, name, phone, color);
-
-        // Update auth metadata manually for immediate sync
-        await supabaseClient.auth.updateUser({
-            data: { full_name: name, avatar_url: avatarUrl, preferred_color: color }
-        });
+        await DriverService.updateProfile(currentUser.id, name, phone, avatarUrl, color);
 
         await showAlert('Profile updated!', 'success');
         location.reload();
     } catch (e) {
-        await showAlert('Error: ' + e.message, 'error');
+        console.error('Save profile failed:', e);
+        await showAlert('Update Failed', e.message, 'error');
     } finally {
         btn.innerText = 'Save Changes';
         btn.disabled = false;

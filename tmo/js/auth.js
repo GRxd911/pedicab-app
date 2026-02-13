@@ -20,5 +20,5 @@ export async function checkTMOSession() {
 
 export async function logoutTMO() {
     await supabaseClient.auth.signOut();
-    window.location.href = 'tmo-signin.html';
+    window.location.href = 'signin.html';
 }

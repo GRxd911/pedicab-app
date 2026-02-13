@@ -20,6 +20,7 @@ export async function getAllEmergencies() {
             passenger:user_id (
                 fullname, 
                 phone,
+                avatar_url,
                 emergency_contact_name,
                 emergency_contact_phone
             ),
@@ -27,6 +28,7 @@ export async function getAllEmergencies() {
                 status,
                 driver:driver_id (
                     fullname,
+                    avatar_url,
                     drivers (
                         pedicab_plate
                     )

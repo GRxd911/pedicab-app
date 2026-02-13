@@ -45,6 +45,12 @@ export async function updateEmergencyContact(userId, name, phone) {
 }
 
 export async function updateProfile(userId, fullname, phone, avatarFile, preferredColor) {
+    // 0. Ensure session is active before proceeding (Critical for Vercel/Production)
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !session) {
+        throw new Error("Authentication session missing. Please try logging in again.");
+    }
+
     let avatarUrl = null;
 
     // Fetch current user to get existing avatarUrl if no new file

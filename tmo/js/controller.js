@@ -355,11 +355,19 @@ async function loadDrivers() {
     tbody.innerHTML = drivers.map(d => {
         const r = ratingMap[d.driver_id];
         const avg = r ? (r.sum / r.count).toFixed(1) : 'N/A';
+        const user = Array.isArray(d.users) ? d.users[0] : d.users;
+
+        const avatarHtml = user?.avatar_url
+            ? `<img src="${user.avatar_url}" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;">`
+            : `<div style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;"><i class='bx bxs-user' style="color: #94a3b8; font-size: 18px;"></i></div>`;
 
         return `
             <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 12px;">${(Array.isArray(d.users) ? d.users[0]?.fullname : d.users?.fullname) || '---'}</td>
-                <td style="padding: 12px;">${d.users?.phone || '---'}</td>
+                <td style="padding: 12px; display: flex; align-items: center; gap: 12px;">
+                    ${avatarHtml}
+                    <span>${user?.fullname || '---'}</span>
+                </td>
+                <td style="padding: 12px;">${user?.phone || '---'}</td>
                 <td style="padding: 12px;">${d.pedicab_plate || '---'}</td>
                 <td style="padding: 12px;"><span class="badge ${d.status === 'online' ? 'badge-success' : 'badge-primary'}">${d.status}</span></td>
                 <td style="padding: 12px;">${avg} ⭐</td>
@@ -382,37 +390,52 @@ async function loadDrivers() {
 async function loadUsers() {
     const users = await TMODashboard.getUsers();
     const tbody = document.getElementById('users-table-body');
-    tbody.innerHTML = users.map(u => `
-        <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 12px;">${u.fullname}</td>
-            <td style="padding: 12px;">${u.email}</td>
-            <td style="padding: 12px;"><span class="badge badge-primary">${u.role}</span></td>
-            <td style="padding: 12px;">${new Date(u.created_at).toLocaleDateString()}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = users.map(u => {
+        const avatarHtml = u.avatar_url
+            ? `<img src="${u.avatar_url}" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;">`
+            : `<div style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;"><i class='bx bxs-user' style="color: #94a3b8; font-size: 18px;"></i></div>`;
+
+        return `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px; display: flex; align-items: center; gap: 12px;">
+                    ${avatarHtml}
+                    <span>${u.fullname || '---'}</span>
+                </td>
+                <td style="padding: 12px;">${u.email}</td>
+                <td style="padding: 12px;"><span class="badge ${u.role === 'admin' ? 'badge-danger' : 'badge-primary'}">${u.role}</span></td>
+                <td style="padding: 12px;">${new Date(u.created_at).toLocaleDateString()}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 async function loadEmergencies() {
     const logs = await TMOEmergencies.getAllEmergencies();
     const tbody = document.getElementById('emergencies-table-body');
     tbody.innerHTML = logs.map(l => {
-        // Extract plate the safe way through the new join structure
         const driverUser = Array.isArray(l.rides?.driver) ? l.rides.driver[0] : l.rides?.driver;
         const driverDetails = Array.isArray(driverUser?.drivers) ? driverUser.drivers[0] : driverUser?.drivers;
         const plate = driverDetails?.pedicab_plate || 'N/A';
 
+        const passAvatar = l.passenger?.avatar_url
+            ? `<img src="${l.passenger.avatar_url}" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">`
+            : `<div style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 50%; background: #fee2e2; display: flex; align-items: center; justify-content: center; border: 1px solid #fecaca;"><i class='bx bxs-user' style="color: #ef4444; font-size: 18px;"></i></div>`;
+
         return `
-        <tr style="border-bottom: 1px solid #f1f5f9; ${l.status === 'active' ? 'background: #fff1f2;' : ''}">
-            <td style="padding: 12px;">${new Date(l.created_at).toLocaleTimeString()}</td>
-            <td style="padding: 12px;">${l.passenger?.fullname || 'Unknown'}</td>
-            <td style="padding: 12px;">${plate !== 'N/A' ? '#' + plate : 'N/A'}</td>
-            <td style="padding: 12px;">${l.passenger?.emergency_contact_name || 'N/A'}</td>
-            <td style="padding: 12px;"><span class="badge ${l.status === 'active' ? 'badge-danger' : 'badge-success'}">${l.status}</span></td>
-            <td style="padding: 12px;">
-                ${l.status === 'active' ? `<button onclick="window.markResolved('${l.id}')" class="switcher-btn">Resolve</button>` : ''}
-                <button onclick="window.deleteEmergency('${l.id}')" style="color: #ef4444; border:none; background:none; cursor:pointer;"><i class='bx bx-trash'></i></button>
-            </td>
-        </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9; ${l.status === 'active' ? 'background: #fff1f2;' : ''}">
+                <td style="padding: 12px;">${new Date(l.created_at).toLocaleTimeString()}</td>
+                <td style="padding: 12px; display: flex; align-items: center; gap: 10px;">
+                    ${passAvatar}
+                    <span>${l.passenger?.fullname || 'Unknown'}</span>
+                </td>
+                <td style="padding: 12px;">${plate !== 'N/A' ? '#' + plate : 'N/A'}</td>
+                <td style="padding: 12px;">${l.passenger?.emergency_contact_name || 'N/A'}</td>
+                <td style="padding: 12px;"><span class="badge ${l.status === 'active' ? 'badge-danger' : 'badge-success'}">${l.status}</span></td>
+                <td style="padding: 12px;">
+                    ${l.status === 'active' ? `<button onclick="window.markResolved('${l.id}')" class="switcher-btn">Resolve</button>` : ''}
+                    <button onclick="window.deleteEmergency('${l.id}')" style="color: #ef4444; border:none; background:none; cursor:pointer;"><i class='bx bx-trash'></i></button>
+                </td>
+            </tr>
         `;
     }).join('');
 }
@@ -427,14 +450,14 @@ async function loadBroadcastsHistory() {
             if (a.type === 'warning') color = '#f59e0b';
             if (a.type === 'danger') color = '#ef4444';
             return `
-                <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border-left: 4px solid ${color}; margin-bottom: 12px; position: relative;">
+            < div style = "background: #f8fafc; padding: 15px; border-radius: 12px; border-left: 4px solid ${color}; margin-bottom: 12px; position: relative;" >
                     <button onclick="window.deleteBroadcast('${a.id}')" style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 18px;" title="Delete Alert">
                         <i class='bx bx-trash'></i>
                     </button>
                     <h4 style="font-size: 14px; margin-bottom: 4px;">${a.title}</h4>
                     <p style="font-size: 12px; color: var(--text-muted);">${a.message}</p>
                     <span style="font-size: 10px; color: var(--text-muted); margin-top: 8px; display: block;">${new Date(a.created_at).toLocaleString()}</span>
-                </div>
+                </div >
             `;
         }).join('');
     } else {
@@ -461,9 +484,9 @@ async function showEmergencyAlert(emergency) {
             const plate = driverDetails?.pedicab_plate || 'N/A';
 
             details.innerHTML = `
-                <strong>PASSENGER: ${data.passenger?.fullname || 'Unknown'}</strong> (${data.passenger?.phone || 'No Phone'})<br>
-                VEHICLE: #${plate} • TYPE: ${data.type}<br>
-                <span style="background: #fff; color: #e11d48; padding: 2px 5px; border-radius: 4px; font-weight: bold;">SOS DETECTED</span>
+            < strong > PASSENGER: ${data.passenger?.fullname || 'Unknown'}</strong > (${data.passenger?.phone || 'No Phone'}) < br >
+        VEHICLE: #${plate} • TYPE: ${data.type} <br>
+            <span style="background: #fff; color: #e11d48; padding: 2px 5px; border-radius: 4px; font-weight: bold;">SOS DETECTED</span>
             `;
             alertBox.style.display = 'block';
 

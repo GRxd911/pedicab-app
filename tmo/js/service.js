@@ -51,7 +51,7 @@ export async function getDrivers(filter = 'all') {
         .from('drivers')
         .select(`
             *,
-            users (fullname, phone, email)
+            users (fullname, phone, email, avatar_url)
         `);
 
     if (filter === 'pending') {
